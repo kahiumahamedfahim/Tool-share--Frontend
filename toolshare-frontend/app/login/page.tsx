@@ -169,10 +169,10 @@ return (
       <p className="mt-6 text-center text-sm text-zinc-500">
         Don&apos;t have an account?{" "}
         <a
-          href="/register/admin"
+          href="/register"
           className="font-medium text-blue-600 hover:text-blue-700"
         >
-          Create Admin Account
+          Create  Account
         </a>
       </p>
     </div>

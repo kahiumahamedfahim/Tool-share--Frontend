@@ -1,80 +1,71 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import axios, { isAxiosError } from "axios";
+import {
+  ChangeEvent,
+  FormEvent,
+  useState,
+} from "react";
+
+import { useRouter } from "next/navigation";
+
+import axios, {
+  isAxiosError,
+} from "axios";
 
 import {
   registrationSchema,
-  type RegistrationFormData,
+  RegistrationFormData,
 } from "@/schemas/auth/registration.schema";
 
 import Loading from "@/app/components/Loading";
 import ErrorMessage from "@/app/components/ErrorMessage";
 
-type RegistrationRole =
-  | "ADMIN"
-  | "MODERATOR"
-  | "RIDER"
-  | "USER";
+const API_BASE_URL =
+  "http://localhost:7000";
+
+const MAX_FILE_SIZE =
+  2 * 1024 * 1024;
+
+const ALLOWED_FILE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+type FormErrors = Partial<
+  Record<
+    keyof RegistrationFormData,
+    string
+  >
+>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   /*
-   * --------------------------------------------------
-   * Registration Role
-   * --------------------------------------------------
-   *
-   * Example:
-   *
-   * /register
-   * /register?role=USER
-   * /register?role=RIDER
-   * /register?role=MODERATOR
-   * /register?role=ADMIN
-   *
-   * If no role is provided, USER is the default.
+   * ==========================================================
+   * Form State
+   * ==========================================================
    */
 
-  const roleParam = searchParams.get("role");
+  const [formData, setFormData] =
+    useState<RegistrationFormData>({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+      nidNumber: "",
+    });
 
-  const [role, setRole] =
-    useState<RegistrationRole>("USER");
-
-  useEffect(() => {
-    if (
-      roleParam === "ADMIN" ||
-      roleParam === "MODERATOR" ||
-      roleParam === "RIDER" ||
-      roleParam === "USER"
-    ) {
-      setRole(roleParam);
-    } else {
-      setRole("USER");
-    }
-  }, [roleParam]);
+  const [formErrors, setFormErrors] =
+    useState<FormErrors>({});
 
   /*
-   * --------------------------------------------------
-   * Form States
-   * --------------------------------------------------
-   */
-
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] =
-    useState("");
-  const [nidNumber, setNidNumber] = useState("");
-
-  /*
-   * --------------------------------------------------
-   * File States
-   * --------------------------------------------------
+   * ==========================================================
+   * File State
+   * ==========================================================
    */
 
   const [profileImage, setProfileImage] =
@@ -87,10 +78,31 @@ export default function RegisterPage() {
     useState<File | null>(null);
 
   /*
-   * --------------------------------------------------
-   * UI States
-   * --------------------------------------------------
+   * ==========================================================
+   * Preview State
+   * ==========================================================
    */
+
+  const [profilePreview, setProfilePreview] =
+    useState<string | null>(null);
+
+  const [nidFrontPreview, setNidFrontPreview] =
+    useState<string | null>(null);
+
+  const [nidBackPreview, setNidBackPreview] =
+    useState<string | null>(null);
+
+  /*
+   * ==========================================================
+   * UI State
+   * ==========================================================
+   */
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [apiError, setApiError] =
+    useState("");
 
   const [showPassword, setShowPassword] =
     useState(false);
@@ -98,46 +110,232 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
 
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof RegistrationFormData, string>>
-  >({});
-
-  const [apiError, setApiError] = useState("");
-
-  const [loading, setLoading] = useState(false);
-
   /*
-   * --------------------------------------------------
-   * Registration Endpoint
-   * --------------------------------------------------
-   *
-   * Frontend role is only used to select the endpoint.
-   *
-   * Backend still decides whether the authenticated
-   * user is actually allowed to create this role.
+   * ==========================================================
+   * Input Change
+   * ==========================================================
    */
 
-  const getRegistrationEndpoint = () => {
-    switch (role) {
-      case "ADMIN":
-        return "http://localhost:7000/users/admin/register";
+  const handleInputChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
 
-      case "MODERATOR":
-        return "http://localhost:7000/moderator/register";
+    setFormData(
+      (previous) => ({
+        ...previous,
+        [name]: value,
+      }),
+    );
 
-      case "RIDER":
-        return "http://localhost:7000/rider/register";
+    setFormErrors(
+      (previous) => ({
+        ...previous,
+        [name]:
+          undefined,
+      }),
+    );
 
-      case "USER":
-      default:
-        return "http://localhost:7000/user/register";
-    }
+    setApiError("");
   };
 
   /*
-   * --------------------------------------------------
+   * ==========================================================
+   * File Validation
+   * ==========================================================
+   */
+
+  const validateFile = (
+    file: File,
+  ): string | null => {
+    if (
+      !ALLOWED_FILE_TYPES.includes(
+        file.type,
+      )
+    ) {
+      return (
+        "Only JPG, JPEG, PNG and WEBP " +
+        "images are allowed."
+      );
+    }
+
+    if (
+      file.size > MAX_FILE_SIZE
+    ) {
+      return (
+        "Image size must not exceed 2 MB."
+      );
+    }
+
+    return null;
+  };
+
+  /*
+   * ==========================================================
+   * Profile Image
+   * ==========================================================
+   */
+
+  const handleProfileImageChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file =
+      event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const error =
+      validateFile(file);
+
+    if (error) {
+      setApiError(error);
+      event.target.value = "";
+      return;
+    }
+
+    setProfileImage(file);
+
+    setProfilePreview(
+      URL.createObjectURL(file),
+    );
+
+    setApiError("");
+  };
+
+  /*
+   * ==========================================================
+   * NID Front Image
+   * ==========================================================
+   */
+
+  const handleNidFrontImageChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file =
+      event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const error =
+      validateFile(file);
+
+    if (error) {
+      setApiError(error);
+      event.target.value = "";
+      return;
+    }
+
+    setNidFrontImage(file);
+
+    setNidFrontPreview(
+      URL.createObjectURL(file),
+    );
+
+    setApiError("");
+  };
+
+  /*
+   * ==========================================================
+   * NID Back Image
+   * ==========================================================
+   */
+
+  const handleNidBackImageChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file =
+      event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const error =
+      validateFile(file);
+
+    if (error) {
+      setApiError(error);
+      event.target.value = "";
+      return;
+    }
+
+    setNidBackImage(file);
+
+    setNidBackPreview(
+      URL.createObjectURL(file),
+    );
+
+    setApiError("");
+  };
+
+  /*
+   * ==========================================================
+   * Remove Images
+   * ==========================================================
+   */
+
+  const removeProfileImage = () => {
+    setProfileImage(null);
+    setProfilePreview(null);
+  };
+
+  const removeNidFrontImage = () => {
+    setNidFrontImage(null);
+    setNidFrontPreview(null);
+  };
+
+  const removeNidBackImage = () => {
+    setNidBackImage(null);
+    setNidBackPreview(null);
+  };
+
+  /*
+   * ==========================================================
+   * Validate Form
+   * ==========================================================
+   */
+
+  const validateForm = (): boolean => {
+    const result =
+      registrationSchema.safeParse(
+        formData,
+      );
+
+    if (result.success) {
+      setFormErrors({});
+      return true;
+    }
+
+    const errors: FormErrors = {};
+
+    result.error.issues.forEach(
+      (issue) => {
+        const field =
+          issue.path[0] as keyof RegistrationFormData;
+
+        if (!errors[field]) {
+          errors[field] =
+            issue.message;
+        }
+      },
+    );
+
+    setFormErrors(errors);
+
+    return false;
+  };
+
+  /*
+   * ==========================================================
    * Submit
-   * --------------------------------------------------
+   * ==========================================================
    */
 
   const handleSubmit = async (
@@ -145,687 +343,973 @@ export default function RegisterPage() {
   ) => {
     event.preventDefault();
 
-    /*
-     * Clear previous errors
-     */
-
-    setErrors({});
     setApiError("");
 
     /*
-     * Zod validation
+     * --------------------------------------------------------
+     * Zod Validation
+     * --------------------------------------------------------
      */
 
-    const result = registrationSchema.safeParse({
-      firstName,
-      lastName,
-      email,
-      phone,
-      password,
-      confirmPassword,
-      nidNumber,
-    });
+    const isValid =
+      validateForm();
 
-    /*
-     * Validation failed
-     */
-
-    if (!result.success) {
-      const fieldErrors: Partial<
-        Record<keyof RegistrationFormData, string>
-      > = {};
-
-      result.error.issues.forEach((issue) => {
-        const field =
-          issue.path[0] as keyof RegistrationFormData;
-
-        if (!fieldErrors[field]) {
-          fieldErrors[field] = issue.message;
-        }
-      });
-
-      setErrors(fieldErrors);
-
+    if (!isValid) {
       return;
     }
 
     /*
-     * --------------------------------------------------
-     * Create FormData
-     * --------------------------------------------------
+     * --------------------------------------------------------
+     * Required File Validation
+     * --------------------------------------------------------
      */
 
-    const formData = new FormData();
-
-    formData.append(
-      "firstName",
-      result.data.firstName,
-    );
-
-    formData.append(
-      "lastName",
-      result.data.lastName,
-    );
-
-    formData.append(
-      "email",
-      result.data.email,
-    );
-
-    formData.append(
-      "phone",
-      result.data.phone,
-    );
-
-    formData.append(
-      "password",
-      result.data.password,
-    );
-
-    formData.append(
-      "nidNumber",
-      result.data.nidNumber,
-    );
-
-    /*
-     * Files
-     */
-
-    if (profileImage) {
-      formData.append(
-        "profileImage",
-        profileImage,
+    if (!profileImage) {
+      setApiError(
+        "Profile image is required.",
       );
+      return;
     }
 
-    if (nidFrontImage) {
-      formData.append(
-        "nidFrontImage",
-        nidFrontImage,
+    if (!nidFrontImage) {
+      setApiError(
+        "NID front image is required.",
       );
+      return;
     }
 
-    if (nidBackImage) {
-      formData.append(
-        "nidBackImage",
-        nidBackImage,
+    if (!nidBackImage) {
+      setApiError(
+        "NID back image is required.",
       );
+      return;
     }
-
-    /*
-     * --------------------------------------------------
-     * API Request
-     * --------------------------------------------------
-     */
 
     try {
       setLoading(true);
 
-      const endpoint =
-        getRegistrationEndpoint();
+      /*
+       * ------------------------------------------------------
+       * Create FormData
+       * ------------------------------------------------------
+       */
 
-      const response = await axios.post(
-        endpoint,
-        formData,
-        {
-          withCredentials: true,
-        },
+      const multipartData =
+        new FormData();
+
+      /*
+       * ------------------------------------------------------
+       * Text Fields
+       * ------------------------------------------------------
+       */
+
+      multipartData.append(
+        "firstName",
+        formData.firstName.trim(),
       );
 
+      multipartData.append(
+        "lastName",
+        formData.lastName.trim(),
+      );
+
+      multipartData.append(
+        "email",
+        formData.email.trim(),
+      );
+
+      multipartData.append(
+        "phone",
+        formData.phone.trim(),
+      );
+
+      multipartData.append(
+        "password",
+        formData.password,
+      );
+
+      multipartData.append(
+        "nidNumber",
+        formData.nidNumber.trim(),
+      );
+
+      /*
+       * ------------------------------------------------------
+       * Files
+       * ------------------------------------------------------
+       */
+
+      multipartData.append(
+        "profileImage",
+        profileImage,
+      );
+
+      multipartData.append(
+        "nidFrontImage",
+        nidFrontImage,
+      );
+
+      multipartData.append(
+        "nidBackImage",
+        nidBackImage,
+      );
+
+      /*
+       * confirmPassword is NOT sent.
+       * It is only used for frontend validation.
+       */
+
+      /*
+       * ------------------------------------------------------
+       * API Request
+       * ------------------------------------------------------
+       */
+
+      const response =
+        await axios.post(
+          `${API_BASE_URL}/users/register`,
+          multipartData,
+          {
+            withCredentials: true,
+          },
+        );
+
       console.log(
-        "Registration successful:",
+        "Registration response:",
         response.data,
       );
 
       /*
-       * Later we will redirect to:
-       *
-       * /verify-email?email=...
-       *
-       * For now just log the response.
+       * ------------------------------------------------------
+       * Email Verification
+       * ------------------------------------------------------
        */
 
-    } catch (error) {
-      console.log(
+      router.push(
+        `/verify-email?email=${encodeURIComponent(
+          formData.email.trim(),
+        )}`,
+      );
+    }
+    catch (error) {
+      console.error(
         "Registration error:",
         error,
       );
 
-      /*
-       * Axios error
-       */
-
-      if (isAxiosError(error)) {
+      if (
+        isAxiosError(error)
+      ) {
         const message =
-          error.response?.data?.message;
+          error.response?.data
+            ?.message;
 
-        if (Array.isArray(message)) {
+        if (
+          Array.isArray(message)
+        ) {
           setApiError(
             message.join(", "),
           );
-        } else {
+        }
+        else {
           setApiError(
             message ||
-              "Registration failed. Please try again.",
+              "Failed to create account.",
           );
         }
-
-        return;
       }
-
-      /*
-       * Unknown error
-       */
-
-      setApiError(
-        "Something went wrong. Please try again.",
-      );
-    } finally {
+      else {
+        setApiError(
+          "Something went wrong. Please try again.",
+        );
+      }
+    }
+    finally {
       setLoading(false);
     }
   };
 
+  /*
+   * ==========================================================
+   * Render
+   * ==========================================================
+   */
+
   return (
     <>
-      {/* Loading Overlay */}
-
       <Loading show={loading} />
-
-      {/* API Error Modal */}
 
       <ErrorMessage
         message={apiError}
         show={!!apiError}
-        onClose={() => setApiError("")}
+        onClose={() =>
+          setApiError("")
+        }
       />
 
-      <main className="min-h-screen bg-zinc-50 px-6 py-12">
-        <div className="mx-auto w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+      <main className="min-h-screen bg-zinc-50 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl">
 
+          {/* ================================================== */}
           {/* Header */}
+          {/* ================================================== */}
 
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-zinc-900">
-              Create Your Account
-            </h1>
+          <div className="mb-8">
 
-            <p className="mt-2 text-sm text-zinc-500">
-              Register your ToolShare account
-            </p>
+            <button
+              type="button"
+              onClick={() =>
+                router.back()
+              }
+              className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
+            >
+              ← Back
+            </button>
+
+            <div>
+
+              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+                Create Account
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+                Create your account and
+                submit the required identity
+                documents.
+              </p>
+
+            </div>
+
           </div>
 
-          {/* Registration Form */}
+          {/* ================================================== */}
+          {/* Form */}
+          {/* ================================================== */}
 
           <form
             onSubmit={handleSubmit}
-            className="mt-8 space-y-5"
+            className="space-y-6"
           >
 
-            {/* First Name */}
+            {/* ================================================== */}
+            {/* Account Information */}
+            {/* ================================================== */}
 
-            <div>
-              <label
-                htmlFor="firstName"
-                className="mb-2 block text-sm font-medium text-zinc-700"
-              >
-                First Name
-              </label>
+            <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
 
-              <input
-                id="firstName"
-                type="text"
-                placeholder="Enter your first name"
-                value={firstName}
-                onChange={(event) => {
-                  setFirstName(
-                    event.target.value,
-                  );
+              <div className="mb-7">
 
-                  setErrors((previous) => ({
-                    ...previous,
-                    firstName: undefined,
-                  }));
-                }}
-                className={`w-full rounded-lg border px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:ring-2 ${
-                  errors.firstName
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                    : "border-zinc-300 focus:border-blue-600 focus:ring-blue-100"
-                }`}
-              />
+                <div className="flex items-center gap-3">
 
-              {errors.firstName && (
-                <p className="mt-1.5 text-sm text-red-500">
-                  {errors.firstName}
-                </p>
-              )}
-            </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    👤
+                  </div>
 
-            {/* Last Name */}
+                  <div>
 
-            <div>
-              <label
-                htmlFor="lastName"
-                className="mb-2 block text-sm font-medium text-zinc-700"
-              >
-                Last Name
-              </label>
+                    <h2 className="text-lg font-bold text-zinc-900">
+                      Account Information
+                    </h2>
 
-              <input
-                id="lastName"
-                type="text"
-                placeholder="Enter your last name"
-                value={lastName}
-                onChange={(event) => {
-                  setLastName(
-                    event.target.value,
-                  );
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Enter your basic
+                      account information.
+                    </p>
 
-                  setErrors((previous) => ({
-                    ...previous,
-                    lastName: undefined,
-                  }));
-                }}
-                className={`w-full rounded-lg border px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:ring-2 ${
-                  errors.lastName
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                    : "border-zinc-300 focus:border-blue-600 focus:ring-blue-100"
-                }`}
-              />
+                  </div>
 
-              {errors.lastName && (
-                <p className="mt-1.5 text-sm text-red-500">
-                  {errors.lastName}
-                </p>
-              )}
-            </div>
+                </div>
 
-            {/* Email */}
-
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium text-zinc-700"
-              >
-                Email
-              </label>
-
-              <input
-                id="email"
-                type="text"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(event) => {
-                  setEmail(
-                    event.target.value,
-                  );
-
-                  setErrors((previous) => ({
-                    ...previous,
-                    email: undefined,
-                  }));
-                }}
-                className={`w-full rounded-lg border px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:ring-2 ${
-                  errors.email
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                    : "border-zinc-300 focus:border-blue-600 focus:ring-blue-100"
-                }`}
-              />
-
-              {errors.email && (
-                <p className="mt-1.5 text-sm text-red-500">
-                  {errors.email}
-                </p>
-              )}
-            </div>
-
-            {/* Phone */}
-
-            <div>
-              <label
-                htmlFor="phone"
-                className="mb-2 block text-sm font-medium text-zinc-700"
-              >
-                Phone Number
-              </label>
-
-              <input
-                id="phone"
-                type="tel"
-                placeholder="01XXXXXXXXX"
-                value={phone}
-                onChange={(event) => {
-                  setPhone(
-                    event.target.value,
-                  );
-
-                  setErrors((previous) => ({
-                    ...previous,
-                    phone: undefined,
-                  }));
-                }}
-                className={`w-full rounded-lg border px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:ring-2 ${
-                  errors.phone
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                    : "border-zinc-300 focus:border-blue-600 focus:ring-blue-100"
-                }`}
-              />
-
-              {errors.phone && (
-                <p className="mt-1.5 text-sm text-red-500">
-                  {errors.phone}
-                </p>
-              )}
-            </div>
-
-            {/* Password */}
-
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium text-zinc-700"
-              >
-                Password
-              </label>
-
-              <div className="relative">
-                <input
-                  id="password"
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(event) => {
-                    setPassword(
-                      event.target.value,
-                    );
-
-                    setErrors((previous) => ({
-                      ...previous,
-                      password: undefined,
-                    }));
-                  }}
-                  className={`w-full rounded-lg border px-4 py-3 pr-20 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:ring-2 ${
-                    errors.password
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                      : "border-zinc-300 focus:border-blue-600 focus:ring-blue-100"
-                  }`}
-                />
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword(
-                      !showPassword,
-                    )
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-blue-600 hover:text-blue-700"
-                >
-                  {showPassword
-                    ? "Hide"
-                    : "Show"}
-                </button>
               </div>
 
-              {errors.password && (
-                <p className="mt-1.5 text-sm text-red-500">
-                  {errors.password}
-                </p>
-              )}
-            </div>
+              <div className="grid gap-5 sm:grid-cols-2">
 
-            {/* Confirm Password */}
+                {/* First Name */}
 
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-2 block text-sm font-medium text-zinc-700"
-              >
-                Confirm Password
-              </label>
+                <div>
 
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  type={
-                    showConfirmPassword
-                      ? "text"
-                      : "password"
-                  }
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={(event) => {
-                    setConfirmPassword(
-                      event.target.value,
-                    );
+                  <label
+                    htmlFor="firstName"
+                    className="mb-2 block text-sm font-semibold text-zinc-700"
+                  >
+                    First Name
+                  </label>
 
-                    setErrors((previous) => ({
-                      ...previous,
-                      confirmPassword:
-                        undefined,
-                    }));
-                  }}
-                  className={`w-full rounded-lg border px-4 py-3 pr-20 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:ring-2 ${
-                    errors.confirmPassword
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                      : "border-zinc-300 focus:border-blue-600 focus:ring-blue-100"
-                  }`}
-                />
+                  <input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    value={
+                      formData.firstName
+                    }
+                    onChange={
+                      handleInputChange
+                    }
+                    placeholder="Enter first name"
+                    disabled={loading}
+                    className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:ring-2 disabled:bg-zinc-100 ${
+                      formErrors.firstName
+                        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                        : "border-zinc-300 focus:border-blue-500 focus:ring-blue-100"
+                    }`}
+                  />
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowConfirmPassword(
-                      !showConfirmPassword,
-                    )
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-blue-600 hover:text-blue-700"
-                >
-                  {showConfirmPassword
-                    ? "Hide"
-                    : "Show"}
-                </button>
+                  {formErrors.firstName && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">
+                      {
+                        formErrors.firstName
+                      }
+                    </p>
+                  )}
+
+                </div>
+
+                {/* Last Name */}
+
+                <div>
+
+                  <label
+                    htmlFor="lastName"
+                    className="mb-2 block text-sm font-semibold text-zinc-700"
+                  >
+                    Last Name
+                  </label>
+
+                  <input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    value={
+                      formData.lastName
+                    }
+                    onChange={
+                      handleInputChange
+                    }
+                    placeholder="Enter last name"
+                    disabled={loading}
+                    className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:ring-2 disabled:bg-zinc-100 ${
+                      formErrors.lastName
+                        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                        : "border-zinc-300 focus:border-blue-500 focus:ring-blue-100"
+                    }`}
+                  />
+
+                  {formErrors.lastName && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">
+                      {
+                        formErrors.lastName
+                      }
+                    </p>
+                  )}
+
+                </div>
+
+                {/* Email */}
+
+                <div>
+
+                  <label
+                    htmlFor="email"
+                    className="mb-2 block text-sm font-medium text-zinc-700"
+                  >
+                    Email
+                  </label>
+
+                  <input
+                    id="email"
+                    name="email"
+                    type="text"
+                    value={formData.email}
+                    onChange={
+                      handleInputChange
+                    }
+                    placeholder="Enter email"
+                    disabled={loading}
+                    className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:ring-2 disabled:bg-zinc-100 ${
+                      formErrors.email
+                        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                        : "border-zinc-300 focus:border-blue-500 focus:ring-blue-100"
+                    }`}
+                  />
+
+                  {formErrors.email && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">
+                      {
+                        formErrors.email
+                      }
+                    </p>
+                  )}
+
+                </div>
+
+                {/* Phone */}
+
+                <div>
+
+                  <label
+                    htmlFor="phone"
+                    className="mb-2 block text-sm font-semibold text-zinc-700"
+                  >
+                    Phone Number
+                  </label>
+
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    value={
+                      formData.phone
+                    }
+                    onChange={
+                      handleInputChange
+                    }
+                    placeholder="01712345678"
+                    disabled={loading}
+                    className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:ring-2 disabled:bg-zinc-100 ${
+                      formErrors.phone
+                        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                        : "border-zinc-300 focus:border-blue-500 focus:ring-blue-100"
+                    }`}
+                  />
+
+                  {formErrors.phone && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">
+                      {
+                        formErrors.phone
+                      }
+                    </p>
+                  )}
+
+                  <p className="mt-1.5 text-xs text-zinc-400">
+                    Example: 01712345678
+                  </p>
+
+                </div>
+
+                {/* Password */}
+
+                <div>
+
+                  <label
+                    htmlFor="password"
+                    className="mb-2 block text-sm font-semibold text-zinc-700"
+                  >
+                    Password
+                  </label>
+
+                  <div className="relative">
+
+                    <input
+                      id="password"
+                      name="password"
+                      type={
+                        showPassword
+                          ? "text"
+                          : "password"
+                      }
+                      value={
+                        formData.password
+                      }
+                      onChange={
+                        handleInputChange
+                      }
+                      placeholder="Enter password"
+                      disabled={loading}
+                      className={`w-full rounded-xl border bg-white px-4 py-3 pr-20 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:ring-2 disabled:bg-zinc-100 ${
+                        formErrors.password
+                          ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                          : "border-zinc-300 focus:border-blue-500 focus:ring-blue-100"
+                      }`}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPassword(
+                          (previous) =>
+                            !previous,
+                        )
+                      }
+                      disabled={loading}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-500 transition hover:text-zinc-900"
+                    >
+                      {showPassword
+                        ? "Hide"
+                        : "Show"}
+                    </button>
+
+                  </div>
+
+                  {formErrors.password && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">
+                      {
+                        formErrors.password
+                      }
+                    </p>
+                  )}
+
+                </div>
+
+                {/* Confirm Password */}
+
+                <div>
+
+                  <label
+                    htmlFor="confirmPassword"
+                    className="mb-2 block text-sm font-semibold text-zinc-700"
+                  >
+                    Confirm Password
+                  </label>
+
+                  <div className="relative">
+
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={
+                        showConfirmPassword
+                          ? "text"
+                          : "password"
+                      }
+                      value={
+                        formData.confirmPassword
+                      }
+                      onChange={
+                        handleInputChange
+                      }
+                      placeholder="Confirm password"
+                      disabled={loading}
+                      className={`w-full rounded-xl border bg-white px-4 py-3 pr-20 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:ring-2 disabled:bg-zinc-100 ${
+                        formErrors.confirmPassword
+                          ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                          : "border-zinc-300 focus:border-blue-500 focus:ring-blue-100"
+                      }`}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(
+                          (previous) =>
+                            !previous,
+                        )
+                      }
+                      disabled={loading}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-500 transition hover:text-zinc-900"
+                    >
+                      {showConfirmPassword
+                        ? "Hide"
+                        : "Show"}
+                    </button>
+
+                  </div>
+
+                  {formErrors.confirmPassword && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">
+                      {
+                        formErrors.confirmPassword
+                      }
+                    </p>
+                  )}
+
+                </div>
+
+                {/* NID Number */}
+
+                <div className="sm:col-span-2">
+
+                  <label
+                    htmlFor="nidNumber"
+                    className="mb-2 block text-sm font-semibold text-zinc-700"
+                  >
+                    NID Number
+                  </label>
+
+                  <input
+                    id="nidNumber"
+                    name="nidNumber"
+                    type="text"
+                    value={
+                      formData.nidNumber
+                    }
+                    onChange={
+                      handleInputChange
+                    }
+                    placeholder="Enter 10 digit NID number"
+                    disabled={loading}
+                    className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:ring-2 disabled:bg-zinc-100 ${
+                      formErrors.nidNumber
+                        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                        : "border-zinc-300 focus:border-blue-500 focus:ring-blue-100"
+                    }`}
+                  />
+
+                  {formErrors.nidNumber && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">
+                      {
+                        formErrors.nidNumber
+                      }
+                    </p>
+                  )}
+
+                </div>
+
               </div>
 
-              {errors.confirmPassword && (
-                <p className="mt-1.5 text-sm text-red-500">
-                  {errors.confirmPassword}
+            </section>
+
+            {/* ================================================== */}
+            {/* Identity Documents */}
+            {/* ================================================== */}
+
+            <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+
+              <div className="mb-7">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    🪪
+                  </div>
+
+                  <div>
+
+                    <h2 className="text-lg font-bold text-zinc-900">
+                      Identity Documents
+                    </h2>
+
+                    <p className="mt-1 text-sm text-zinc-500">
+                      All three documents are
+                      required to create your
+                      account.
+                    </p>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-3">
+
+                {/* Profile Image */}
+
+                <div>
+
+                  <p className="mb-2 text-sm font-semibold text-zinc-700">
+                    Profile Image
+                    <span className="ml-1 text-red-500">
+                      *
+                    </span>
+                  </p>
+
+                  <label
+                    htmlFor="profileImage"
+                    className="block cursor-pointer"
+                  >
+
+                    <div className="flex min-h-72 flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 transition hover:border-blue-400 hover:bg-blue-50/30">
+
+                      {profilePreview ? (
+                        <img
+                          src={
+                            profilePreview
+                          }
+                          alt="Profile preview"
+                          className="h-72 w-full object-cover"
+                        />
+                      ) : (
+                        <>
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-2xl">
+                            👤
+                          </div>
+
+                          <p className="mt-4 text-sm font-semibold text-zinc-700">
+                            Upload Profile Image
+                          </p>
+
+                          <p className="mt-1 text-xs text-zinc-400">
+                            JPG, PNG, WEBP ·
+                            Max 2MB
+                          </p>
+                        </>
+                      )}
+
+                    </div>
+
+                    <input
+                      id="profileImage"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={
+                        handleProfileImageChange
+                      }
+                      disabled={loading}
+                      className="hidden"
+                    />
+
+                  </label>
+
+                  {profileImage && (
+                    <div className="mt-3 flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2">
+
+                      <p className="min-w-0 truncate text-xs text-zinc-500">
+                        {
+                          profileImage.name
+                        }
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={
+                          removeProfileImage
+                        }
+                        disabled={loading}
+                        className="ml-3 shrink-0 text-xs font-semibold text-red-600 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+
+                    </div>
+                  )}
+
+                </div>
+
+                {/* NID Front */}
+
+                <div>
+
+                  <p className="mb-2 text-sm font-semibold text-zinc-700">
+                    NID Front
+                    <span className="ml-1 text-red-500">
+                      *
+                    </span>
+                  </p>
+
+                  <label
+                    htmlFor="nidFrontImage"
+                    className="block cursor-pointer"
+                  >
+
+                    <div className="flex min-h-72 flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 transition hover:border-blue-400 hover:bg-blue-50/30">
+
+                      {nidFrontPreview ? (
+                        <img
+                          src={
+                            nidFrontPreview
+                          }
+                          alt="NID front preview"
+                          className="h-72 w-full object-contain"
+                        />
+                      ) : (
+                        <>
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-2xl">
+                            🪪
+                          </div>
+
+                          <p className="mt-4 text-sm font-semibold text-zinc-700">
+                            Upload NID Front
+                          </p>
+
+                          <p className="mt-1 text-xs text-zinc-400">
+                            JPG, PNG, WEBP ·
+                            Max 2MB
+                          </p>
+                        </>
+                      )}
+
+                    </div>
+
+                    <input
+                      id="nidFrontImage"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={
+                        handleNidFrontImageChange
+                      }
+                      disabled={loading}
+                      className="hidden"
+                    />
+
+                  </label>
+
+                  {nidFrontImage && (
+                    <div className="mt-3 flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2">
+
+                      <p className="min-w-0 truncate text-xs text-zinc-500">
+                        {
+                          nidFrontImage.name
+                        }
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={
+                          removeNidFrontImage
+                        }
+                        disabled={loading}
+                        className="ml-3 shrink-0 text-xs font-semibold text-red-600 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+
+                    </div>
+                  )}
+
+                </div>
+
+                {/* NID Back */}
+
+                <div>
+
+                  <p className="mb-2 text-sm font-semibold text-zinc-700">
+                    NID Back
+                    <span className="ml-1 text-red-500">
+                      *
+                    </span>
+                  </p>
+
+                  <label
+                    htmlFor="nidBackImage"
+                    className="block cursor-pointer"
+                  >
+
+                    <div className="flex min-h-72 flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 transition hover:border-blue-400 hover:bg-blue-50/30">
+
+                      {nidBackPreview ? (
+                        <img
+                          src={
+                            nidBackPreview
+                          }
+                          alt="NID back preview"
+                          className="h-72 w-full object-contain"
+                        />
+                      ) : (
+                        <>
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-2xl">
+                            🪪
+                          </div>
+
+                          <p className="mt-4 text-sm font-semibold text-zinc-700">
+                            Upload NID Back
+                          </p>
+
+                          <p className="mt-1 text-xs text-zinc-400">
+                            JPG, PNG, WEBP ·
+                            Max 2MB
+                          </p>
+                        </>
+                      )}
+
+                    </div>
+
+                    <input
+                      id="nidBackImage"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={
+                        handleNidBackImageChange
+                      }
+                      disabled={loading}
+                      className="hidden"
+                    />
+
+                  </label>
+
+                  {nidBackImage && (
+                    <div className="mt-3 flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2">
+
+                      <p className="min-w-0 truncate text-xs text-zinc-500">
+                        {
+                          nidBackImage.name
+                        }
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={
+                          removeNidBackImage
+                        }
+                        disabled={loading}
+                        className="ml-3 shrink-0 text-xs font-semibold text-red-600 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+
+                    </div>
+                  )}
+
+                </div>
+
+              </div>
+
+              {/* Upload Information */}
+
+              <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+
+                <p className="text-xs leading-5 text-blue-700">
+                  All three images are required.
+                  Supported formats are JPG,
+                  JPEG, PNG and WEBP. Maximum
+                  file size is 2 MB per image.
                 </p>
-              )}
-            </div>
 
-            {/* NID */}
+              </div>
 
-            <div>
-              <label
-                htmlFor="nidNumber"
-                className="mb-2 block text-sm font-medium text-zinc-700"
-              >
-                NID Number
-              </label>
+            </section>
 
-              <input
-                id="nidNumber"
-                type="text"
-                placeholder="Enter your 10 digit NID number"
-                value={nidNumber}
-                onChange={(event) => {
-                  setNidNumber(
-                    event.target.value,
-                  );
+            {/* ================================================== */}
+            {/* Submit Section */}
+            {/* ================================================== */}
 
-                  setErrors((previous) => ({
-                    ...previous,
-                    nidNumber: undefined,
-                  }));
-                }}
-                className={`w-full rounded-lg border px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:ring-2 ${
-                  errors.nidNumber
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                    : "border-zinc-300 focus:border-blue-600 focus:ring-blue-100"
-                }`}
-              />
+            <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
 
-              {errors.nidNumber && (
-                <p className="mt-1.5 text-sm text-red-500">
-                  {errors.nidNumber}
-                </p>
-              )}
-            </div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-            {/* Profile Image */}
+                <div>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-700">
-                Profile Image
-              </label>
+                  <h2 className="font-semibold text-zinc-900">
+                    Create Account
+                  </h2>
 
-              <label
-                htmlFor="profileImage"
-                className="group flex cursor-pointer items-center gap-4 rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-5 py-4 transition hover:border-blue-500 hover:bg-blue-50"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                  ↑
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-zinc-800 group-hover:text-blue-600">
-                    {profileImage
-                      ? profileImage.name
-                      : "Upload profile image"}
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Review all information before
+                    creating your account.
                   </p>
 
-                  <p className="mt-1 text-xs text-zinc-500">
-                    JPG, PNG or WEBP · Max 2MB
-                  </p>
                 </div>
 
-                <span className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-medium text-blue-600">
-                  Browse
-                </span>
+                <div className="flex flex-col-reverse gap-3 sm:flex-row">
 
-                <input
-                  id="profileImage"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(event) =>
-                    setProfileImage(
-                      event.target.files?.[0] ??
-                        null,
-                    )
-                  }
-                  className="hidden"
-                />
-              </label>
-            </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.back()
+                    }
+                    disabled={loading}
+                    className="rounded-xl border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
 
-            {/* NID Front */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loading
+                      ? "Creating Account..."
+                      : "Create Account"}
+                  </button>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-700">
-                NID Front Image
-              </label>
-
-              <label
-                htmlFor="nidFrontImage"
-                className="group flex cursor-pointer items-center gap-4 rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-5 py-4 transition hover:border-blue-500 hover:bg-blue-50"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                  ↑
                 </div>
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-zinc-800 group-hover:text-blue-600">
-                    {nidFrontImage
-                      ? nidFrontImage.name
-                      : "Upload NID front image"}
-                  </p>
+              </div>
 
-                  <p className="mt-1 text-xs text-zinc-500">
-                    JPG, PNG or WEBP · Max 2MB
-                  </p>
-                </div>
-
-                <span className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-medium text-blue-600">
-                  Browse
-                </span>
-
-                <input
-                  id="nidFrontImage"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(event) =>
-                    setNidFrontImage(
-                      event.target.files?.[0] ??
-                        null,
-                    )
-                  }
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {/* NID Back */}
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-700">
-                NID Back Image
-              </label>
-
-              <label
-                htmlFor="nidBackImage"
-                className="group flex cursor-pointer items-center gap-4 rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-5 py-4 transition hover:border-blue-500 hover:bg-blue-50"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                  ↑
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-zinc-800 group-hover:text-blue-600">
-                    {nidBackImage
-                      ? nidBackImage.name
-                      : "Upload NID back image"}
-                  </p>
-
-                  <p className="mt-1 text-xs text-zinc-500">
-                    JPG, PNG or WEBP · Max 2MB
-                  </p>
-                </div>
-
-                <span className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-medium text-blue-600">
-                  Browse
-                </span>
-
-                <input
-                  id="nidBackImage"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(event) =>
-                    setNidBackImage(
-                      event.target.files?.[0] ??
-                        null,
-                    )
-                  }
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {/* Submit */}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white transition hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading
-                ? "Registering..."
-                : "Register"}
-            </button>
+            </section>
 
           </form>
+
         </div>
       </main>
     </>

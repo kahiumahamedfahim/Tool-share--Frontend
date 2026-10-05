@@ -9,7 +9,7 @@ export default function ThankYouPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.push("/home");
+      router.push("/");
     }, 3000);
 
     return () => {
