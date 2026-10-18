@@ -60,7 +60,6 @@ type FormErrors = Partial<
 
 export default function CreateModeratorPage() {
   const router = useRouter();
-  type UserRole = "ADMIN" | "MODERATOR";
 
   /*
    * ==========================================================
@@ -81,7 +80,6 @@ export default function CreateModeratorPage() {
 
   const [formErrors, setFormErrors] =
     useState<FormErrors>({});
-    type UserRole = "ADMIN" | "MODERATOR";
 
   /*
    * ==========================================================
@@ -133,8 +131,6 @@ export default function CreateModeratorPage() {
 
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
-    const [userRole, setUserRole] =
-  useState<UserRole | null>(null);
 
   /*
    * ==========================================================
@@ -564,7 +560,7 @@ router.push(
       {/* Loading */}
       {/* ================================================== */}
 
- <RoleBasedNavbar role={userRole ?? "ADMIN"} />
+      <RoleBasedNavbar />
       <Loading show={loading} />
 
       {/* ================================================== */}
@@ -673,7 +669,7 @@ router.push(
                     </h2>
 
                     <p className="mt-1 text-sm text-zinc-500">
-                      Enter the moderator's basic
+                      Enter the moderator&apos;s basic
                       account information.
                     </p>
                   </div>

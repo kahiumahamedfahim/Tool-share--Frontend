@@ -57,7 +57,7 @@ try {
   } else if (response.data.role === "RIDER") {
     router.push("/rider/dashboard");
   } else if (response.data.role === "USER") {
-    router.push("/dashboard");
+    router.push("/dashboard/user");
   }
 }
 catch (error: any) {

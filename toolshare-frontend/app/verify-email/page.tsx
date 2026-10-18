@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useState,
   type CSSProperties,
@@ -21,6 +22,22 @@ import Loading from "@/app/components/Loading";
 import ErrorMessage from "@/app/components/ErrorMessage";
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-zinc-50">
+          <p className="text-sm text-zinc-600">
+            Loading verification...
+          </p>
+        </main>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
+  );
+}
+
+function VerifyEmailContent() {
   const router = useRouter();
 
   const searchParams = useSearchParams();
@@ -169,23 +186,6 @@ if (role === "ADMIN") {
         "Email verification error:",
         error,
       );
-      const role = response.data.role;
-
-if (role === "ADMIN") {
-  router.push(
-    "/admin/pending-documents",
-  );
-} else if (role === "MODERATOR") {
-  router.push(
-    "/moderator/pending-documents",
-  );
-} else if (role === "RIDER") {
-  router.push(
-    "/rider/pending-documents",
-  );
-} else {
-  router.push("/thank-you");
-}
 
       if (isAxiosError(error)) {
         const message =
@@ -522,7 +522,7 @@ if (role === "ADMIN") {
             <div className="mt-5 text-center">
 
               <p className="text-sm text-zinc-500">
-                Didn't receive the code?
+                Didn&apos;t receive the code?
               </p>
 
               <button
