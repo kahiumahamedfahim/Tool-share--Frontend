@@ -69,6 +69,14 @@ export default function ModeratorNavbar()
     ];
 
 
+    const rentalItems = [
+        {
+            label: "Rental Reviews",
+            href: "/rentals/moderator",
+        },
+    ];
+
+
     /*
     |--------------------------------------------------------------------------
     | Active Route
@@ -427,6 +435,14 @@ export default function ModeratorNavbar()
                         />
 
 
+                        {/* Rentals */}
+
+                        <DesktopDropdown
+                            label="Rentals"
+                            items={rentalItems}
+                        />
+
+
                         {/* ================================================== */}
                         {/* Desktop Notification */}
                         {/* ================================================== */}
@@ -674,6 +690,17 @@ export default function ModeratorNavbar()
                             <MobileDropdown
                                 label="Categories"
                                 items={categoryItems}
+                            />
+
+
+                            <div className="my-3 border-t border-zinc-100" />
+
+
+                            {/* Rentals */}
+
+                            <MobileDropdown
+                                label="Rentals"
+                                items={rentalItems}
                             />
 
 

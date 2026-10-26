@@ -1,6 +1,6 @@
 "use client";
 
-import axios from "axios";
+import { isAxiosError } from "axios";
 import { useEffect, useState } from "react";
 
 import RoleBasedNavbar from "@/app/components/RoleBasedNavbar";
@@ -8,6 +8,7 @@ import CreateCategory from "@/app/components/categories/CreateCategory";
 import EditCategory from "@/app/components/categories/EditCategory";
 import Loading from "@/app/components/Loading";
 import ErrorMessage from "@/app/components/ErrorMessage";
+import api from "@/app/lib/axios";
 
 interface Category {
     id: number;
@@ -30,12 +31,17 @@ type UserRole =
 export default function Categories() {
     /*
     |--------------------------------------------------------------------------
-    | API
+    | API Base URL
     |--------------------------------------------------------------------------
+    |
+    | Used for image URLs delivered by
+    | the backend static file server.
+    |
     */
 
     const API_BASE_URL =
-        process.env.NEXT_PUBLIC_API_URL;
+        process.env.NEXT_PUBLIC_API_URL ||
+        "http://localhost:7000";
 
     /*
     |--------------------------------------------------------------------------
@@ -174,97 +180,52 @@ export default function Categories() {
             setError("");
             setShowError(false);
 
-            const response =
-                await axios.get<Category[]>(
-                    `${API_BASE_URL}/categories`
-                );
-
-            console.log(
-                "Categories API Response:",
-                response.data
-            );
-
             /*
-            |--------------------------------------------------------------------------
-            | All Categories
-            |--------------------------------------------------------------------------
+            | Server-side pagination:
+            | the backend returns
+            | { data, meta: { page, limit, total, totalPages } }
             */
 
-            const allCategories =
-                response.data;
+            const response = await api.get<{
+                data: Category[];
+                meta: {
+                    page: number;
+                    limit: number;
+                    total: number;
+                    totalPages: number;
+                };
+            }>("/categories", {
+                params: {
+                    page,
+                    limit,
+                },
+            });
 
-            /*
-            |--------------------------------------------------------------------------
-            | Total Categories
-            |--------------------------------------------------------------------------
-            */
+            const pageCategories =
+                Array.isArray(
+                    response.data?.data
+                )
+                    ? response.data.data
+                    : [];
 
-            setTotalCategories(
-                allCategories.length
-            );
+            const meta =
+                response.data?.meta;
 
-            /*
-            |--------------------------------------------------------------------------
-            | Calculate Total Pages
-            |--------------------------------------------------------------------------
-            */
-
-            const calculatedTotalPages =
-                Math.ceil(
-                    allCategories.length / limit
-                );
-
-            const finalTotalPages =
-                calculatedTotalPages > 0
-                    ? calculatedTotalPages
+            const safeTotalPages =
+                meta?.totalPages && meta.totalPages > 0
+                    ? meta.totalPages
                     : 1;
 
-            setTotalPages(
-                finalTotalPages
+            setCategories(
+                pageCategories
             );
 
-            /*
-            |--------------------------------------------------------------------------
-            | Protect Current Page
-            |--------------------------------------------------------------------------
-            */
+            setTotalPages(
+                safeTotalPages
+            );
 
-            if (
-                page > finalTotalPages
-            ) {
-                setPage(
-                    finalTotalPages
-                );
-
-                return;
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | Calculate Current Page Data
-            |--------------------------------------------------------------------------
-            */
-
-            const startIndex =
-                (page - 1) * limit;
-
-            const endIndex =
-                startIndex + limit;
-
-            const currentPageCategories =
-                allCategories.slice(
-                    startIndex,
-                    endIndex
-                );
-
-            /*
-            |--------------------------------------------------------------------------
-            | Set Current Page Categories
-            |--------------------------------------------------------------------------
-            */
-
-            setCategories(
-                currentPageCategories
+            setTotalCategories(
+                meta?.total ?? pageCategories.length
             );
         } catch (error: unknown) {
             console.error(
@@ -273,7 +234,7 @@ export default function Categories() {
             );
 
             if (
-                axios.isAxiosError(error)
+                isAxiosError(error)
             ) {
                 const backendMessage =
                     error.response?.data?.message;
@@ -441,11 +402,8 @@ export default function Categories() {
             |
             */
 
-            await axios.delete(
-                `${API_BASE_URL}/categories/${categoryId}`,
-                {
-                    withCredentials: true,
-                }
+            await api.delete(
+                `/categories/${categoryId}`
             );
 
             /*
@@ -462,7 +420,7 @@ export default function Categories() {
             );
 
             if (
-                axios.isAxiosError(error)
+                isAxiosError(error)
             ) {
                 const backendMessage =
                     error.response?.data?.message;

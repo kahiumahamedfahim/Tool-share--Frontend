@@ -1,6 +1,6 @@
 "use client";
 
-import axios from "axios";
+import api from "@/app/lib/axios";
 import { ChangeEvent, FormEvent, useState } from "react";
 import { z } from "zod";
 
@@ -150,12 +150,9 @@ export default function CreateCategory({
                 formData.append("image", image);
             }
 
-           await axios.post(
-    `${process.env.NEXT_PUBLIC_API_URL}/categories/create`,
+           await api.post(
+    "/categories/create",
     formData,
-    {
-        withCredentials: true,
-    },
 );
 
             resetForm();

@@ -1,7 +1,13 @@
 "use client";
 
-import axios from "axios";
-import { FormEvent, useEffect, useState } from "react";
+import { isAxiosError } from "axios";
+import api from "@/app/lib/axios";
+import {
+    ChangeEvent,
+    FormEvent,
+    useEffect,
+    useState,
+} from "react";
 import { z } from "zod";
 
 interface Category {
@@ -36,6 +42,10 @@ const editCategorySchema = z.object({
     status: z.enum(["ACTIVE", "INACTIVE"]),
 });
 
+const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:7000";
+
 export default function EditCategory({
     open,
     category,
@@ -49,6 +59,12 @@ export default function EditCategory({
 
     const [updating, setUpdating] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+
+    const [newImage, setNewImage] =
+        useState<File | null>(null);
+
+    const [newImagePreview, setNewImagePreview] =
+        useState<string | null>(null);
 
     /*
     |--------------------------------------------------------------------------
@@ -72,8 +88,66 @@ export default function EditCategory({
         );
 
         setErrorMessage("");
+        setNewImage(null);
+        setNewImagePreview(null);
 
     }, [category]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Image Handling
+    |--------------------------------------------------------------------------
+    */
+
+    const handleImageChange = (
+        event: ChangeEvent<HTMLInputElement>,
+    ) => {
+        const selectedFile = event.target.files?.[0];
+
+        if (!selectedFile) {
+            return;
+        }
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ];
+
+        if (!allowedTypes.includes(selectedFile.type)) {
+            setErrorMessage(
+                "Only JPG, JPEG, PNG and WEBP images are allowed.",
+            );
+
+            event.target.value = "";
+
+            return;
+        }
+
+        const maxSize = 2 * 1024 * 1024;
+
+        if (selectedFile.size > maxSize) {
+            setErrorMessage(
+                "Image size cannot exceed 2 MB.",
+            );
+
+            event.target.value = "";
+
+            return;
+        }
+
+        setErrorMessage("");
+        setNewImage(selectedFile);
+
+        setNewImagePreview(
+            URL.createObjectURL(selectedFile),
+        );
+    };
+
+    const removeNewImage = () => {
+        setNewImage(null);
+        setNewImagePreview(null);
+    };
 
     /*
     |--------------------------------------------------------------------------
@@ -120,43 +194,43 @@ export default function EditCategory({
         |--------------------------------------------------------------------------
         | API
         |--------------------------------------------------------------------------
+        |
+        | The update is always sent as multipart/form-data
+        | so that an optional new image can be attached.
+        |
         */
-
-        const apiBaseUrl =
-            process.env.NEXT_PUBLIC_API_URL;
-
-        const updateUrl =
-            `${apiBaseUrl}/categories/${category.categoryId}`;
-
-        console.log("=================================");
-        console.log("EDIT CATEGORY");
-        console.log("Category ID:", category.categoryId);
-        console.log("API URL:", apiBaseUrl);
-        console.log("Update URL:", updateUrl);
-        console.log("=================================");
 
         try {
 
             setUpdating(true);
 
-            const response = await axios.patch(
-                updateUrl,
-                {
-                    name: validationResult.data.name,
-                    description:
-                        validationResult.data.description,
+            const formData = new FormData();
 
-                    status:
-                        validationResult.data.status,
-                },
-                {
-                    withCredentials: true,
-                }
+            formData.append(
+                "name",
+                validationResult.data.name,
             );
 
-            console.log(
-                "Category updated successfully:",
-                response.data
+            formData.append(
+                "description",
+                validationResult.data.description ?? "",
+            );
+
+            formData.append(
+                "status",
+                validationResult.data.status,
+            );
+
+            if (newImage) {
+                formData.append(
+                    "image",
+                    newImage,
+                );
+            }
+
+            await api.patch(
+                `/categories/${category.categoryId}`,
+                formData,
             );
 
             /*
@@ -171,32 +245,7 @@ export default function EditCategory({
 
         } catch (error: unknown) {
 
-            console.error(
-                "Category update failed:",
-                error
-            );
-
-            if (axios.isAxiosError(error)) {
-
-                console.log(
-                    "Status:",
-                    error.response?.status
-                );
-
-                console.log(
-                    "Response:",
-                    error.response?.data
-                );
-
-                console.log(
-                    "Request URL:",
-                    error.config?.url
-                );
-
-                console.log(
-                    "Request Method:",
-                    error.config?.method
-                );
+            if (isAxiosError(error)) {
 
                 const backendMessage =
                     error.response?.data?.message;
@@ -244,6 +293,20 @@ export default function EditCategory({
 
         onClose();
     };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Current Preview Image
+    |--------------------------------------------------------------------------
+    */
+
+    const previewImage = newImagePreview
+        ? newImagePreview
+        : category?.image
+          ? `${API_BASE_URL}/uploads/category/${encodeURIComponent(
+                category.image
+            )}`
+          : null;
 
     /*
     |--------------------------------------------------------------------------
@@ -419,6 +482,69 @@ export default function EditCategory({
                             </option>
 
                         </select>
+
+                    </div>
+
+                    {/* Image */}
+
+                    <div>
+
+                        <label className="mb-2 block text-sm font-medium text-zinc-700">
+                            Category Image
+                        </label>
+
+                        {previewImage ? (
+
+                            <div className="relative overflow-hidden rounded-xl border border-zinc-200">
+
+                                <img
+                                    src={previewImage}
+                                    alt="Category preview"
+                                    className="h-40 w-full object-cover"
+                                />
+
+                                {newImagePreview && (
+                                    <button
+                                        type="button"
+                                        onClick={removeNewImage}
+                                        disabled={updating}
+                                        className="absolute right-3 top-3 rounded-lg bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition hover:bg-black/80 disabled:opacity-50"
+                                    >
+                                        Undo
+                                    </button>
+                                )}
+
+                            </div>
+
+                        ) : (
+                            <div className="flex h-32 items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 text-sm text-zinc-400">
+                                No image
+                            </div>
+                        )}
+
+                        <label
+                            htmlFor="category-image"
+                            className="mt-2 inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+                        >
+                            {newImage
+                                ? "Replace image"
+                                : "Upload new image"}
+
+                            <input
+                                id="category-image"
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                onChange={
+                                    handleImageChange
+                                }
+                                disabled={updating}
+                                className="hidden"
+                            />
+                        </label>
+
+                        <p className="mt-1 text-xs text-zinc-400">
+                            JPG, PNG or WEBP • Maximum 2 MB
+                        </p>
 
                     </div>
 

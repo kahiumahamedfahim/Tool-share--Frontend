@@ -4,6 +4,7 @@ export interface ProductCategory {
 }
 
 export interface ProductImage {
+    id?: string;
     filePath?: string;
     imageUrl?: string;
     url?: string;

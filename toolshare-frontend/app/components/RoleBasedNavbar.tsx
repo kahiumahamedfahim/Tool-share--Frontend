@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import AdminNavbar from "@/app/components/admin/AdminNavbar";
 import ModeratorNavbar from "@/app/components/moderator/ModeratorNavbar";
 import UserNavbar from "@/app/components/user/usernavbar";
+import RiderNavbar from "@/app/components/rider/RiderNavbar";
 
 export default function RoleBasedNavbar() {
     const [userRole, setUserRole] = useState<
-        "ADMIN" | "MODERATOR" | "USER" | null
+        "ADMIN" | "MODERATOR" | "USER" | "RIDER" | null
     >(null);
 
     useEffect(() => {
@@ -17,7 +18,8 @@ export default function RoleBasedNavbar() {
         if (
             role === "ADMIN" ||
             role === "MODERATOR" ||
-            role === "USER"
+            role === "USER" ||
+            role === "RIDER"
         ) {
             setUserRole(role);
         }
@@ -33,6 +35,10 @@ export default function RoleBasedNavbar() {
 
     if (userRole === "USER") {
         return <UserNavbar />;
+    }
+
+    if (userRole === "RIDER") {
+        return <RiderNavbar />;
     }
 
     return null;
