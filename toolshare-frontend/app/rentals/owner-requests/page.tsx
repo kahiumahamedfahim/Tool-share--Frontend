@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import RoleBasedNavbar from "@/app/components/RoleBasedNavbar";
 import {
     getOwnerRentalRequests,
+    rejectAfterApproval,
     updateRentalRequestStatus,
     type RentalRequest,
 } from "@/app/lib/rental-api";
@@ -39,6 +40,13 @@ const STATUS_CONFIG = {
         className:
             "border-blue-200 bg-blue-50 text-blue-700",
         dot: "bg-blue-500",
+    },
+
+    CHARGES_PROPOSED: {
+        label: "Charges proposed",
+        className:
+            "border-indigo-200 bg-indigo-50 text-indigo-700",
+        dot: "bg-indigo-500",
     },
 
     APPROVED: {
@@ -160,6 +168,7 @@ function RequestCard({
     request,
     processingId,
     onAction,
+    onRejectAfterApproval,
     onView,
     onNegotiate,
 }: {
@@ -168,6 +177,9 @@ function RequestCard({
     onAction: (
         requestId: string,
         action: "ACCEPT" | "REJECT",
+    ) => void;
+    onRejectAfterApproval: (
+        requestId: string,
     ) => void;
     onView: (requestId: string) => void;
     onNegotiate: (requestId: string) => void;
@@ -180,6 +192,9 @@ function RequestCard({
     const canNegotiate =
         request.status === "PENDING" ||
         request.status === "NEGOTIATING";
+
+    const canRejectAfterApproval =
+        request.status === "APPROVED";
 
     const isProcessing =
         processingId === request.rentalRequestId;
@@ -493,6 +508,24 @@ function RequestCard({
                             </>
                         )}
 
+                        {/* Reject after moderator approval */}
+                        {canRejectAfterApproval && (
+                            <button
+                                type="button"
+                                disabled={isProcessing}
+                                onClick={() => {
+                                    onRejectAfterApproval(
+                                        request.rentalRequestId,
+                                    );
+                                }}
+                                className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {isProcessing
+                                    ? "Processing..."
+                                    : "Reject after approval"}
+                            </button>
+                        )}
+
                         {/* Negotiation */}
                         {canNegotiate && (
                             <button
@@ -664,6 +697,40 @@ export default function OwnerRentalRequestsPage() {
             setError(
                 err?.response?.data?.message ||
                     "Unable to update this rental request.",
+            );
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleRejectAfterApproval = async (
+        rentalRequestId: string,
+    ) => {
+        const confirmed = window.confirm(
+            "Reject this approved rental request? The renter will be notified.",
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setProcessingId(rentalRequestId);
+            setError("");
+
+            await rejectAfterApproval(
+                rentalRequestId,
+                "REJECT",
+            );
+
+            await loadRequests();
+        } catch (err: any) {
+            console.error(
+                "Reject after approval failed:",
+                err,
+            );
+
+            setError(
+                err?.response?.data?.message ||
+                    "Unable to reject this rental request.",
             );
         } finally {
             setProcessingId(null);
@@ -891,6 +958,9 @@ export default function OwnerRentalRequestsPage() {
                                         }
                                         onAction={
                                             handleAction
+                                        }
+                                        onRejectAfterApproval={
+                                            handleRejectAfterApproval
                                         }
                                         onView={handleView}
                                         onNegotiate={

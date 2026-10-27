@@ -15,7 +15,7 @@ import {
 ===================================================== */
 
 const statusConfig: Record<
-    RentalRequest["status"],
+    "PENDING" | "NEGOTIATING" | "PRICE_AGREED" | "CHARGES_PROPOSED" | "REJECTED" | "EXPIRED" | "APPROVED",
     {
         label: string;
         className: string;
@@ -41,6 +41,13 @@ const statusConfig: Record<
         className:
             "border-emerald-200 bg-emerald-50 text-emerald-700",
         dot: "bg-emerald-500",
+    },
+
+    CHARGES_PROPOSED: {
+        label: "Charges Proposed",
+        className:
+            "border-blue-200 bg-blue-50 text-blue-700",
+        dot: "bg-blue-500",
     },
 
     APPROVED: {

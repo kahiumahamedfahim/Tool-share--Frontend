@@ -94,6 +94,87 @@ export const createProductSchema = z
 
         allowSameDayRental: z.boolean(),
 
+        // Owner-chosen date windows (optional ISO strings)
+        rentalWindowStart: z.preprocess(
+            (value) =>
+                value === undefined || value === null || value === ""
+                    ? undefined
+                    : String(value),
+            z.string().datetime({ offset: true }).optional().nullable(),
+        ),
+        rentalWindowEnd: z.preprocess(
+            (value) =>
+                value === undefined || value === null || value === ""
+                    ? undefined
+                    : String(value),
+            z.string().datetime({ offset: true }).optional().nullable(),
+        ),
+        deliveryWindowStart: z.preprocess(
+            (value) =>
+                value === undefined || value === null || value === ""
+                    ? undefined
+                    : String(value),
+            z.string().datetime({ offset: true }).optional().nullable(),
+        ),
+        deliveryWindowEnd: z.preprocess(
+            (value) =>
+                value === undefined || value === null || value === ""
+                    ? undefined
+                    : String(value),
+            z.string().datetime({ offset: true }).optional().nullable(),
+        ),
+        returnWindowStart: z.preprocess(
+            (value) =>
+                value === undefined || value === null || value === ""
+                    ? undefined
+                    : String(value),
+            z.string().datetime({ offset: true }).optional().nullable(),
+        ),
+        returnWindowEnd: z.preprocess(
+            (value) =>
+                value === undefined || value === null || value === ""
+                    ? undefined
+                    : String(value),
+            z.string().datetime({ offset: true }).optional().nullable(),
+        ),
+
+        // Platform fee percentage per day (default 10)
+        platformFeePercentage: z.preprocess(
+            (value) =>
+                value === undefined || value === null || value === ""
+                    ? undefined
+                    : String(value),
+            z.string()
+                .optional()
+                .refine(
+                    (value) =>
+                        value === undefined ||
+                        (/^\d+(\.\d{1,2})?$/.test(value) &&
+                            Number.isFinite(Number(value)) &&
+                            Number(value) >= 0 &&
+                            Number(value) <= 100),
+                    "Platform fee must be between 0 and 100.",
+                ),
+        ),
+
+        // Base delivery fee
+        deliveryFeeBase: z.preprocess(
+            (value) =>
+                value === undefined || value === null || value === ""
+                    ? undefined
+                    : String(value),
+            z.string()
+                .optional()
+                .refine(
+                    (value) =>
+                        value === undefined ||
+                        (/^\d+(\.\d{1,2})?$/.test(value) &&
+                            Number.isFinite(Number(value)) &&
+                            Number(value) >= 0),
+                    "Delivery fee must be a positive number.",
+                ),
+        ),
+
         // Product images
 
         images: z
@@ -150,6 +231,37 @@ export const createProductSchema = z
                 path: ["maxRentalDays"],
                 message:
                     "Maximum rental days must be greater than or equal to minimum rental days.",
+            });
+        }
+
+        // Date window comparison: rental window start must not be before
+        // delivery to rider start (delivery must happen before rental starts)
+        if (
+            data.rentalWindowStart &&
+            data.deliveryWindowStart &&
+            new Date(data.rentalWindowStart) <
+                new Date(data.deliveryWindowStart)
+        ) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["rentalWindowStart"],
+                message:
+                    "Rental window start must be on or after the delivery-to-rider start time.",
+            });
+        }
+
+        // Return window start must be on or after rental window end
+        if (
+            data.rentalWindowEnd &&
+            data.returnWindowStart &&
+            new Date(data.returnWindowStart) <
+                new Date(data.rentalWindowEnd)
+        ) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["returnWindowStart"],
+                message:
+                    "Return window start must be on or after the rental window end.",
             });
         }
     });

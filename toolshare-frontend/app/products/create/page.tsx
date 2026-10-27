@@ -78,6 +78,14 @@ export default function CreateProductPage() {
             allowSameDayRental: false,
             images: [],
             documents: [],
+            rentalWindowStart: "",
+            rentalWindowEnd: "",
+            deliveryWindowStart: "",
+            deliveryWindowEnd: "",
+            returnWindowStart: "",
+            returnWindowEnd: "",
+            platformFeePercentage: "10",
+            deliveryFeeBase: "0",
         },
     });
 
@@ -88,6 +96,24 @@ export default function CreateProductPage() {
     const { ref: descriptionRef, ...descriptionField } = register("description");
     const { ref: categoryRef, ...categoryField } = register("categoryId");
     const { ref: priceRef, ...priceField } = register("pricePerDay");
+    const { ref: platformFeeRef, ...platformFeeField } = register(
+        "platformFeePercentage",
+    );
+    const { ref: deliveryFeeRef, ...deliveryFeeField } = register(
+        "deliveryFeeBase",
+    );
+    const { ref: rentalWindowStartRef, ...rentalWindowStartField } =
+        register("rentalWindowStart");
+    const { ref: rentalWindowEndRef, ...rentalWindowEndField } =
+        register("rentalWindowEnd");
+    const { ref: deliveryWindowStartRef, ...deliveryWindowStartField } =
+        register("deliveryWindowStart");
+    const { ref: deliveryWindowEndRef, ...deliveryWindowEndField } =
+        register("deliveryWindowEnd");
+    const { ref: returnWindowStartRef, ...returnWindowStartField } =
+        register("returnWindowStart");
+    const { ref: returnWindowEndRef, ...returnWindowEndField } =
+        register("returnWindowEnd");
 
     useEffect(() => {
         let isMounted = true;
@@ -157,6 +183,33 @@ export default function CreateProductPage() {
             String(data.preparationBufferDays),
         );
         formData.append("allowSameDayRental", String(data.allowSameDayRental));
+
+        if (data.rentalWindowStart) {
+            formData.append("rentalWindowStart", data.rentalWindowStart);
+        }
+        if (data.rentalWindowEnd) {
+            formData.append("rentalWindowEnd", data.rentalWindowEnd);
+        }
+        if (data.deliveryWindowStart) {
+            formData.append("deliveryWindowStart", data.deliveryWindowStart);
+        }
+        if (data.deliveryWindowEnd) {
+            formData.append("deliveryWindowEnd", data.deliveryWindowEnd);
+        }
+        if (data.returnWindowStart) {
+            formData.append("returnWindowStart", data.returnWindowStart);
+        }
+        if (data.returnWindowEnd) {
+            formData.append("returnWindowEnd", data.returnWindowEnd);
+        }
+        formData.append(
+            "platformFeePercentage",
+            data.platformFeePercentage ?? "10",
+        );
+        formData.append(
+            "deliveryFeeBase",
+            data.deliveryFeeBase ?? "0",
+        );
 
         formData.append("latitude", String(productLocation.latitude));
         formData.append("longitude", String(productLocation.longitude));
@@ -468,6 +521,143 @@ export default function CreateProductPage() {
                             <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
                                 <p className="text-sm leading-6 text-blue-900">
                                     <strong>Important:</strong> Renters must choose a duration within your limits. The backend must validate availability and preparation gaps before confirming a rental.
+                                </p>
+                            </div>
+                        </section>
+
+                        {/* Rental Date Windows & Fees */}
+                        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                            <h2 className="text-lg font-semibold text-slate-900">Rental Date Windows &amp; Fees</h2>
+                            <p className="mt-1 text-sm leading-6 text-slate-500">
+                                Set the date windows when this product is available for rent, when you can hand it to the rider, and when it must be returned. You can also set the platform fee percentage and base delivery fee.
+                            </p>
+
+                            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label htmlFor="rental-window-start" className="mb-2 block text-sm font-medium text-slate-700">Rental Window Start *</label>
+                                    <input
+                                        {...rentalWindowStartField}
+                                        ref={rentalWindowStartRef}
+                                        id="rental-window-start"
+                                        type="datetime-local"
+                                        aria-invalid={Boolean(errors.rentalWindowStart)}
+                                        className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 ${errors.rentalWindowStart ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`}
+                                    />
+                                    {errors.rentalWindowStart && <p className="mt-2 text-sm text-red-600">{errors.rentalWindowStart.message}</p>}
+                                    <p className="mt-1 text-xs text-slate-500">When the renter may start using the product (e.g. 2026-10-22T09:00).</p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="rental-window-end" className="mb-2 block text-sm font-medium text-slate-700">Rental Window End *</label>
+                                    <input
+                                        {...rentalWindowEndField}
+                                        ref={rentalWindowEndRef}
+                                        id="rental-window-end"
+                                        type="datetime-local"
+                                        aria-invalid={Boolean(errors.rentalWindowEnd)}
+                                        className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 ${errors.rentalWindowEnd ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`}
+                                    />
+                                    {errors.rentalWindowEnd && <p className="mt-2 text-sm text-red-600">{errors.rentalWindowEnd.message}</p>}
+                                    <p className="mt-1 text-xs text-slate-500">When the rental period ends (e.g. 2026-10-30T18:00).</p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="delivery-window-start" className="mb-2 block text-sm font-medium text-slate-700">Delivery to Rider Start</label>
+                                    <input
+                                        {...deliveryWindowStartField}
+                                        ref={deliveryWindowStartRef}
+                                        id="delivery-window-start"
+                                        type="datetime-local"
+                                        aria-invalid={Boolean(errors.deliveryWindowStart)}
+                                        className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 ${errors.deliveryWindowStart ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`}
+                                    />
+                                    {errors.deliveryWindowStart && <p className="mt-2 text-sm text-red-600">{errors.deliveryWindowStart.message}</p>}
+                                    <p className="mt-1 text-xs text-slate-500">When you can hand the product to the rider (e.g. 2026-10-18T09:00).</p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="delivery-window-end" className="mb-2 block text-sm font-medium text-slate-700">Delivery to Rider End</label>
+                                    <input
+                                        {...deliveryWindowEndField}
+                                        ref={deliveryWindowEndRef}
+                                        id="delivery-window-end"
+                                        type="datetime-local"
+                                        aria-invalid={Boolean(errors.deliveryWindowEnd)}
+                                        className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 ${errors.deliveryWindowEnd ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`}
+                                    />
+                                    {errors.deliveryWindowEnd && <p className="mt-2 text-sm text-red-600">{errors.deliveryWindowEnd.message}</p>}
+                                    <p className="mt-1 text-xs text-slate-500">Latest time to hand the product to the rider (e.g. 2026-10-23T18:00).</p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="return-window-start" className="mb-2 block text-sm font-medium text-slate-700">Return Window Start</label>
+                                    <input
+                                        {...returnWindowStartField}
+                                        ref={returnWindowStartRef}
+                                        id="return-window-start"
+                                        type="datetime-local"
+                                        aria-invalid={Boolean(errors.returnWindowStart)}
+                                        className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 ${errors.returnWindowStart ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`}
+                                    />
+                                    {errors.returnWindowStart && <p className="mt-2 text-sm text-red-600">{errors.returnWindowStart.message}</p>}
+                                    <p className="mt-1 text-xs text-slate-500">Earliest time the product must be back with you (e.g. 2026-11-01T09:00).</p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="return-window-end" className="mb-2 block text-sm font-medium text-slate-700">Return Window End</label>
+                                    <input
+                                        {...returnWindowEndField}
+                                        ref={returnWindowEndRef}
+                                        id="return-window-end"
+                                        type="datetime-local"
+                                        aria-invalid={Boolean(errors.returnWindowEnd)}
+                                        className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 ${errors.returnWindowEnd ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`}
+                                    />
+                                    {errors.returnWindowEnd && <p className="mt-2 text-sm text-red-600">{errors.returnWindowEnd.message}</p>}
+                                    <p className="mt-1 text-xs text-slate-500">Latest time the product must be back with you (e.g. 2026-11-03T18:00).</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label htmlFor="platform-fee-percentage" className="mb-2 block text-sm font-medium text-slate-700">Platform Fee (%) *</label>
+                                    <input
+                                        {...platformFeeField}
+                                        ref={platformFeeRef}
+                                        id="platform-fee-percentage"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        placeholder="10"
+                                        aria-invalid={Boolean(errors.platformFeePercentage)}
+                                        className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 ${errors.platformFeePercentage ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`}
+                                    />
+                                    {errors.platformFeePercentage && <p className="mt-2 text-sm text-red-600">{errors.platformFeePercentage.message}</p>}
+                                    <p className="mt-1 text-xs text-slate-500">Platform fee as a percentage of rental income per day (default 10%).</p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="delivery-fee-base" className="mb-2 block text-sm font-medium text-slate-700">Base Delivery Fee (৳) *</label>
+                                    <input
+                                        {...deliveryFeeField}
+                                        ref={deliveryFeeRef}
+                                        id="delivery-fee-base"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="0"
+                                        aria-invalid={Boolean(errors.deliveryFeeBase)}
+                                        className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 ${errors.deliveryFeeBase ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`}
+                                    />
+                                    {errors.deliveryFeeBase && <p className="mt-2 text-sm text-red-600">{errors.deliveryFeeBase.message}</p>}
+                                    <p className="mt-1 text-xs text-slate-500">Base delivery fee. The final amount may be adjusted by distance and product size during moderator review.</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                                <p className="text-sm leading-6 text-blue-900">
+                                    <strong>How it works:</strong> The rental window tells renters when they can book this product. The delivery window is when you give the product to the rider. The return window is when the product must be back with you. The platform fee is deducted from each day's rental income.
                                 </p>
                             </div>
                         </section>

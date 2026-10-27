@@ -733,9 +733,24 @@ export default function CreateRentalRequestPage() {
                 tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
             },
 
+            CHARGES_PROPOSED: {
+                label: "Charges proposed — awaiting your confirmation",
+                tone: "border-blue-200 bg-blue-50 text-blue-700",
+            },
+
             APPROVED: {
                 label: "Approved",
                 tone: "border-blue-200 bg-blue-50 text-blue-700",
+            },
+
+            REJECTED: {
+                label: "Rejected",
+                tone: "border-red-200 bg-red-50 text-red-700",
+            },
+
+            EXPIRED: {
+                label: "Expired",
+                tone: "border-slate-200 bg-slate-100 text-slate-600",
             },
         };
 

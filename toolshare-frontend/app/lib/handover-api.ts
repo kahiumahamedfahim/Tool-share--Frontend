@@ -296,6 +296,46 @@ export const decideEarlyReturn = async (
 };
 
 /* =========================================================
+   Moderator — Submit Warehouse Media
+   multipart/form-data:
+     media: File[]  (photos/videos for warehouse inspection)
+========================================================= */
+
+export const submitModeratorMedia = async (
+    rentalId: string,
+    stage: HandoverStage,
+    files: File[],
+    note?: string,
+) => {
+    const formData = new FormData();
+
+    files.forEach((file) => {
+        formData.append("media", file);
+    });
+
+    if (note) {
+        formData.append("note", note);
+    }
+
+    const response =
+        await api.post<{
+            checkpointId: string;
+            mediaCount: number;
+        }>(
+            `/rentals/handover/${rentalId}/stage/${stage}/moderator-media`,
+            formData,
+            {
+                headers: {
+                    "Content-Type":
+                        "multipart/form-data",
+                },
+            },
+        );
+
+    return response.data;
+};
+
+/* =========================================================
    Error helper
 ========================================================= */
 

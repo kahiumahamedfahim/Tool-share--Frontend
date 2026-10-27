@@ -55,6 +55,10 @@ export default function AdminNavbar()
             href: "/admin/users",
         },
         {
+            label: "Rental Logs",
+            href: "/admin/rental-logs",
+        },
+        {
             label: "Document Verification",
             href: "/admin/document-verification",
         },

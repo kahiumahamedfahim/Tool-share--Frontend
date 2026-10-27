@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
+import api from "@/app/lib/axios";
 
 import ModeratorNavbar from "@/app/components/moderator/ModeratorNavbar";
 import {
@@ -11,6 +12,7 @@ import {
     getCustodyTimeline,
     getHandoverRiderAssignments,
     submitModeratorGate,
+    submitModeratorMedia,
     type CustodyTimeline,
     type HandoverRiderAssignments,
     type HandoverStage,
@@ -95,6 +97,9 @@ export default function ModeratorRentalReviewPage() {
     const [processing, setProcessing] =
         useState(false);
 
+    const [currentUserId, setCurrentUserId] = useState("");
+    const [currentUserRole, setCurrentUserRole] = useState("USER");
+
     /* =================================================
        DECISION INPUTS (APPROVE)
     ================================================= */
@@ -137,6 +142,15 @@ export default function ModeratorRentalReviewPage() {
     const [handoverReviewNote, setHandoverReviewNote] = useState("");
     const [reviewingHandover, setReviewingHandover] = useState(false);
 
+    /* =================================================
+       MODERATOR WAREHOUSE MEDIA
+    ================================================= */
+
+    const [selectedModeratorMedia, setSelectedModeratorMedia] =
+        useState<File[]>([]);
+    const [uploadingModeratorMedia, setUploadingModeratorMedia] =
+        useState(false);
+
     const [creatingRental, setCreatingRental] =
         useState(false);
 
@@ -146,7 +160,13 @@ export default function ModeratorRentalReviewPage() {
 
     const loadCharges = async () => {
         try {
-            setCharges(await getRentalChargesForRequest(rentalRequestId));
+            setCharges(
+                await getRentalChargesForRequest(
+                    rentalRequestId,
+                    currentUserId || "",
+                    currentUserRole || "USER",
+                ),
+            );
         } catch (err) {
             console.error("Failed to load rental charges:", err);
         }
@@ -176,6 +196,25 @@ export default function ModeratorRentalReviewPage() {
             loadRental();
         }
     }, [request?.status, rentalRequestId]);
+
+    useEffect(() => {
+        const loadCurrentUser = async () => {
+            try {
+                const response =
+                    await api.get<{
+                        userId: string;
+                        role: string;
+                    }>("/auth/profile");
+
+                    setCurrentUserId(response.data?.userId ?? "");
+                    setCurrentUserRole(response.data?.role ?? "USER");
+            } catch (err) {
+                console.error("Failed to load current user:", err);
+            }
+        };
+
+        loadCurrentUser();
+    }, []);
 
     useEffect(() => {
         if (!rental?.rentalId) return;
@@ -517,6 +556,47 @@ export default function ModeratorRentalReviewPage() {
                 : backendMessage || "Unable to save the warehouse decision.");
         } finally {
             setReviewingHandover(false);
+        }
+    };
+
+    const handleSubmitModeratorMedia = async (
+        stage: HandoverStage,
+    ) => {
+        if (!rental) return;
+
+        if (selectedModeratorMedia.length === 0) {
+            setActionError("Please select at least one photo or video to upload.");
+            return;
+        }
+
+        try {
+            setUploadingModeratorMedia(true);
+            setActionError("");
+            setSuccess("");
+
+            await submitModeratorMedia(
+                rental.rentalId,
+                stage,
+                selectedModeratorMedia,
+                handoverReviewNote.trim() || undefined,
+            );
+
+            setSuccess(
+                `Uploaded ${selectedModeratorMedia.length} evidence item(s) for the warehouse inspection.`,
+            );
+
+            setSelectedModeratorMedia([]);
+            setHandoverReviewNote("");
+            await reloadHandoverReview();
+        } catch (err) {
+            const backendMessage = isAxiosError(err) ? err.response?.data?.message : null;
+            setActionError(
+                Array.isArray(backendMessage)
+                    ? backendMessage.join(", ")
+                    : backendMessage || "Unable to upload warehouse evidence.",
+            );
+        } finally {
+            setUploadingModeratorMedia(false);
         }
     };
 
@@ -1533,6 +1613,95 @@ export default function ModeratorRentalReviewPage() {
                                                 <div className="mt-3 flex flex-wrap gap-2">
                                                     <button type="button" disabled={reviewingHandover} onClick={() => void handleWarehouseDecision(gateStage, true)} className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Approve warehouse check</button>
                                                     <button type="button" disabled={reviewingHandover} onClick={() => void handleWarehouseDecision(gateStage, false)} className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">Reject and block next handoff</button>
+                                                </div>
+
+                                                {/* Moderator warehouse media upload */}
+                                                <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                                                    <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-2">Moderator inspection evidence</p>
+                                                    <p className="text-xs text-zinc-500 mb-3">Upload your own warehouse inspection photos or videos. This evidence is visible to both the owner and renter.</p>
+
+                                                    <label className="block cursor-pointer rounded-xl border-2 border-dashed border-zinc-300 px-6 py-8 text-center transition hover:border-zinc-400 hover:bg-zinc-100">
+                                                        <span className="text-2xl" aria-hidden="true">📷</span>
+                                                        <span className="mt-2 text-sm font-semibold text-zinc-800">Upload inspection media</span>
+                                                        <input
+                                                            type="file"
+                                                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,video/mp4"
+                                                            multiple
+                                                            onChange={(event) => {
+                                                                const newFiles = Array.from(event.target.files ?? []);
+                                                                if (newFiles.length > 0) {
+                                                                    const combined = [...selectedModeratorMedia, ...newFiles];
+                                                                    if (combined.length > 7) {
+                                                                        setActionError("Maximum 7 media files allowed.");
+                                                                        return;
+                                                                    }
+                                                                    setSelectedModeratorMedia(combined);
+                                                                }
+                                                                event.target.value = "";
+                                                            }}
+                                                            className="sr-only"
+                                                        />
+                                                    </label>
+
+                                                    {selectedModeratorMedia.length > 0 && (
+                                                        <div className="mt-3 flex flex-wrap gap-2">
+                                                            {selectedModeratorMedia.map((file, index) => (
+                                                                <div key={`${file.name}-${index}`} className="relative">
+                                                                    {file.type.startsWith("video/") ? (
+                                                                        <video
+                                                                            src={URL.createObjectURL(file)}
+                                                                            controls
+                                                                            preload="metadata"
+                                                                            className="h-20 w-28 rounded-lg border border-zinc-200 object-cover"
+                                                                        />
+                                                                    ) : (
+                                                                        <img
+                                                                            src={URL.createObjectURL(file)}
+                                                                            alt={`Moderator evidence ${index + 1}`}
+                                                                            className="h-20 w-28 rounded-lg border border-zinc-200 object-cover"
+                                                                        />
+                                                                    )}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setSelectedModeratorMedia(
+                                                                                selectedModeratorMedia.filter((_, i) => i !== index),
+                                                                            );
+                                                                        }}
+                                                                        className="absolute -top-1 -right-1 rounded-full bg-red-500 px-1 text-xs font-bold text-white"
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="mt-3 flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                uploadingModeratorMedia ||
+                                                                selectedModeratorMedia.length === 0
+                                                            }
+                                                            onClick={() =>
+                                                                void handleSubmitModeratorMedia(gateStage)
+                                                            }
+                                                            className={`rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                                uploadingModeratorMedia
+                                                                    ? "bg-zinc-300 text-zinc-600"
+                                                                    : "bg-zinc-900 text-white hover:bg-zinc-800"
+                                                            }`}
+                                                        >
+                                                            {uploadingModeratorMedia
+                                                                ? "Uploading..."
+                                                                : `Upload ${selectedModeratorMedia.length} item(s)`}
+                                                        </button>
+
+                                                        {uploadingModeratorMedia && (
+                                                            <span className="text-xs text-zinc-500">Uploading evidence…</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </section>
                                         );

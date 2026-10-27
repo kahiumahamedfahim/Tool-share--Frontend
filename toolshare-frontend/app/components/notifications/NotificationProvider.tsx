@@ -7,12 +7,12 @@ import {
     useRef,
     useState,
 } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import pusher from "@/app/lib/pusher";
 import api from "@/app/lib/axios";
 
-interface NotificationData {
+export interface NotificationData {
     type: string;
     title: string;
     message: string;
@@ -20,10 +20,21 @@ interface NotificationData {
     userName: string;
     email: string;
     timestamp: string;
+
+    // Optional rental context so clicking a notification
+    // can redirect to the actual workflow page.
+    rentalId?: string | null;
+    link?: string | null;
+
+    // Read/unread state
+    read?: boolean;
 }
 
 interface NotificationContextType {
     notifications: NotificationData[];
+    unreadCount: number;
+    markAllAsRead: () => void;
+    markAsRead: (index: number) => void;
 }
 
 const NotificationContext =
@@ -46,6 +57,32 @@ export default function NotificationProvider({
 
     const pathname = usePathname();
 
+    const unreadCount = notifications.filter(
+        (n) => n.read !== true,
+    ).length;
+
+    const markAllAsRead = () => {
+        setNotifications(
+            (previousNotifications) =>
+                previousNotifications.map((n) => ({
+                    ...n,
+                    read: true,
+                })),
+        );
+    };
+
+    const markAsRead = (index: number) => {
+        setNotifications(
+            (previousNotifications) =>
+                previousNotifications.map((n, i) => {
+                    if (i === index) {
+                        return { ...n, read: true };
+                    }
+                    return n;
+                }),
+        );
+    };
+
     useEffect(() => {
         let mounted = true;
 
@@ -67,9 +104,19 @@ export default function NotificationProvider({
                 return;
             }
 
+            const normalized: NotificationData = {
+                ...data,
+                read: false,
+                link:
+                    data.link ??
+                    (data.rentalId
+                        ? `/rentals/request/${data.rentalId}`
+                        : null),
+            };
+
             setNotifications(
                 (previousNotifications) => [
-                    data,
+                    normalized,
                     ...previousNotifications,
                 ].slice(0, MAX_STORED_NOTIFICATIONS),
             );
@@ -319,6 +366,9 @@ export default function NotificationProvider({
         <NotificationContext.Provider
             value={{
                 notifications,
+                unreadCount,
+                markAllAsRead,
+                markAsRead,
             }}
         >
             {children}

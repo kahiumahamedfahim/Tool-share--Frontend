@@ -15,6 +15,9 @@ import {
     getPaymentForRequest,
     getRentalChargesForRequest,
     getRentalRequestById,
+    ownerAcceptCharges,
+    renterAcceptCharges,
+    renterRentalRequestAction,
     updateNegotiationOffer,
     type ActualRental,
     type NegotiationOffer,
@@ -28,7 +31,7 @@ import {
 ===================================================== */
 
 const statusConfig: Record<
-    RentalRequest["status"],
+    "PENDING" | "NEGOTIATING" | "PRICE_AGREED" | "CHARGES_PROPOSED" | "REJECTED" | "EXPIRED" | "APPROVED",
     {
         label: string;
         description: string;
@@ -61,6 +64,15 @@ const statusConfig: Record<
         className:
             "border-emerald-200 bg-emerald-50 text-emerald-700",
         dot: "bg-emerald-500",
+    },
+
+    CHARGES_PROPOSED: {
+        label: "Charges Proposed",
+        description:
+            "The moderator has proposed charges. Please review and accept.",
+        className:
+            "border-blue-200 bg-blue-50 text-blue-700",
+        dot: "bg-blue-500",
     },
 
     APPROVED: {
@@ -194,11 +206,20 @@ export default function RentalRequestDetailsPage() {
 
     const [currentUserId, setCurrentUserId] =
         useState<string | null>(null);
+    const [currentUserRole, setCurrentUserRole] =
+        useState<string>("USER");
 
     const [respondingOfferId, setRespondingOfferId] =
         useState<string | null>(null);
 
     const [respondError, setRespondError] =
+        useState("");
+
+    const [renterActionBusy, setRenterActionBusy] =
+        useState(false);
+    const [renterActionError, setRenterActionError] =
+        useState("");
+    const [renterActionSuccess, setRenterActionSuccess] =
         useState("");
 
     useEffect(() => {
@@ -212,6 +233,9 @@ export default function RentalRequestDetailsPage() {
 
                 setCurrentUserId(
                     response.data?.userId ?? null,
+                );
+                setCurrentUserRole(
+                    response.data?.role ?? "USER",
                 );
             } catch (err) {
                 console.error(
@@ -414,7 +438,11 @@ export default function RentalRequestDetailsPage() {
 
                 if (data) {
                     setCharges(
-                        await getRentalChargesForRequest(rentalRequestId),
+                        await getRentalChargesForRequest(
+                            rentalRequestId,
+                            currentUserId || "",
+                            currentUserRole || "USER",
+                        ),
                     );
                     await loadPayment();
                 } else {
@@ -571,6 +599,126 @@ export default function RentalRequestDetailsPage() {
             setRespondError(message);
         } finally {
             setRespondingOfferId(null);
+        }
+    };
+
+    /* =================================================
+       RENTER - CONFIRM / REJECT AFTER OWNER ACCEPTANCE
+    ================================================= */
+
+    const handleRenterAction = async (
+        action: "CONFIRM" | "REJECT",
+    ) => {
+        setRenterActionError("");
+        setRenterActionSuccess("");
+
+        const confirmed = window.confirm(
+            action === "CONFIRM"
+                ? "Confirm the agreed rental terms? The moderator will then assign a rider."
+                : "Reject the agreed rental terms?",
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setRenterActionBusy(true);
+
+            await renterRentalRequestAction(
+                rentalRequestId,
+                action,
+            );
+
+            setRenterActionSuccess(
+                action === "CONFIRM"
+                    ? "Terms confirmed. Waiting for moderator to assign a rider."
+                    : "Terms rejected.",
+            );
+
+            await loadRequest();
+        } catch (err: any) {
+            console.error(
+                "Failed to respond to rental terms:",
+                err,
+            );
+
+            let message =
+                "Unable to respond to rental terms.";
+
+            if (isAxiosError(err)) {
+                const backendMessage =
+                    err.response?.data?.message;
+
+                message = Array.isArray(backendMessage)
+                    ? backendMessage.join(", ")
+                    : backendMessage || message;
+            }
+
+            setRenterActionError(message);
+        } finally {
+            setRenterActionBusy(false);
+        }
+    };
+
+    /* =================================================
+       OWNER / RENTER - ACCEPT / REJECT PROPOSED CHARGES
+    ================================================= */
+
+    const [chargeActionBusy, setChargeActionBusy] = useState(false);
+    const [chargeActionError, setChargeActionError] = useState("");
+    const [chargeActionSuccess, setChargeActionSuccess] = useState("");
+
+    const handleChargeAction = async (
+        party: "owner" | "renter",
+        action: "ACCEPT" | "REJECT",
+    ) => {
+        setChargeActionError("");
+        setChargeActionSuccess("");
+
+        const confirmed = window.confirm(
+            action === "ACCEPT"
+                ? `Accept the proposed charges? You will pay: ${party === "owner" ? "owner" : "renter"} charges.`
+                : "Reject the proposed charges?",
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setChargeActionBusy(true);
+
+            if (party === "owner") {
+                await ownerAcceptCharges(rentalRequestId, action);
+            } else {
+                await renterAcceptCharges(rentalRequestId, action);
+            }
+
+            setChargeActionSuccess(
+                action === "ACCEPT"
+                    ? "Charges accepted. Waiting for the other party to accept."
+                    : "Charges rejected.",
+            );
+
+            await loadRequest();
+        } catch (err: any) {
+            console.error(
+                "Failed to respond to charges:",
+                err,
+            );
+
+            let message =
+                "Unable to respond to charges.";
+
+            if (isAxiosError(err)) {
+                const backendMessage =
+                    err.response?.data?.message;
+
+                message = Array.isArray(backendMessage)
+                    ? backendMessage.join(", ")
+                    : backendMessage || message;
+            }
+
+            setChargeActionError(message);
+        } finally {
+            setChargeActionBusy(false);
         }
     };
 
@@ -1530,6 +1678,210 @@ export default function RentalRequestDetailsPage() {
                                                 send a new offer.
                                             </div>
                                         )}
+
+                                    {/* RENTER - Confirm / Reject After Owner Acceptance */}
+                                    {currentUserId ===
+                                        request.renterId &&
+                                        request.status ===
+                                        "PRICE_AGREED" && (
+                                        <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+                                            <h3 className="text-sm font-semibold text-slate-950">
+                                                Confirm Rental Terms
+                                            </h3>
+                                            <p className="mt-1 text-sm text-slate-600">
+                                                The owner has accepted your
+                                                request. Confirm to proceed
+                                                to moderator review, or
+                                                reject.
+                                            </p>
+
+                                            {renterActionError && (
+                                                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                                    {renterActionError}
+                                                </div>
+                                            )}
+
+                                            {renterActionSuccess && (
+                                                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                                                    {renterActionSuccess}
+                                                </div>
+                                            )}
+
+                                            <div className="mt-4 flex flex-wrap gap-3">
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        renterActionBusy
+                                                    }
+                                                    onClick={() =>
+                                                        void handleRenterAction(
+                                                            "CONFIRM",
+                                                        )
+                                                    }
+                                                    className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                        renterActionBusy
+                                                            ? "bg-zinc-300 text-zinc-600"
+                                                            : "bg-blue-600 text-white hover:bg-blue-700"
+                                                    }`}
+                                                >
+                                                    {renterActionBusy
+                                                        ? "Confirming..."
+                                                        : "Confirm Terms"}
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        renterActionBusy
+                                                    }
+                                                    onClick={() =>
+                                                        void handleRenterAction(
+                                                            "REJECT",
+                                                        )
+                                                    }
+                                                    className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                        renterActionBusy
+                                                            ? "bg-zinc-300 text-zinc-600"
+                                                            : "bg-red-600 text-white hover:bg-red-700"
+                                                    }`}
+                                                >
+                                                    {renterActionBusy
+                                                        ? "Processing..."
+                                                        : "Reject Terms"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* OWNER / RENTER - Accept / Reject Proposed Charges */}
+                                    {(request.status as string) === "CHARGES_PROPOSED" && (
+                                        <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
+                                            <h3 className="text-sm font-semibold text-slate-950">
+                                                Review Proposed Charges
+                                            </h3>
+                                            <p className="mt-1 text-sm text-slate-600">
+                                                The moderator has proposed charges
+                                                for this rental. Please review
+                                                and accept or reject.
+                                            </p>
+
+                                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                                <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+                                                    <p className="text-xs font-semibold text-indigo-700">
+                                                        Owner Charges
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-slate-700">
+                                                        Rental:
+                                                        ৳{Number(request.ownerRentalFee ?? "0").toFixed(2)}
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-slate-700">
+                                                        Delivery:
+                                                        ৳{Number(request.ownerDeliveryFee ?? "0").toFixed(2)}
+                                                    </p>
+                                                </div>
+                                                <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+                                                    <p className="text-xs font-semibold text-indigo-700">
+                                                        Renter Charges
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-slate-700">
+                                                        Rental:
+                                                        ৳{Number(request.renterRentalFee ?? "0").toFixed(2)}
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-slate-700">
+                                                        Delivery:
+                                                        ৳{Number(request.renterDeliveryFee ?? "0").toFixed(2)}
+                                                    </p>
+                                                </div>
+                                                <div className="col-span-2 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+                                                    <p className="text-xs font-semibold text-indigo-700">
+                                                        Platform Commission
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-slate-700">
+                                                        {Number(request.platformCommissionRate ?? "0").toFixed(2)}%
+                                                        of rental income
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4">
+                                                <p className="text-xs font-semibold text-indigo-700">
+                                                    Your Charge Status:
+                                                </p>
+                                                <p className="mt-1 text-sm text-slate-600">
+                                                    {currentUserId === request.ownerId
+                                                        ? `Owner: ${
+                                                            request.ownerChargesAccepted ? "Accepted" : "Pending"
+                                                        }`
+                                                        : `Renter: ${
+                                                            request.renterChargesAccepted ? "Accepted" : "Pending"
+                                                        }`}
+                                                </p>
+                                                <p className="mt-1 text-sm text-slate-600">
+                                                    {currentUserId === request.ownerId
+                                                        ? `Renter: ${
+                                                            request.renterChargesAccepted ? "Accepted" : "Pending"
+                                                        }`
+                                                        : `Owner: ${
+                                                            request.ownerChargesAccepted ? "Accepted" : "Pending"
+                                                        }`}
+                                                </p>
+                                            </div>
+
+                                            {chargeActionError && (
+                                                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                                    {chargeActionError}
+                                                </div>
+                                            )}
+
+                                            {chargeActionSuccess && (
+                                                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                                                    {chargeActionSuccess}
+                                                </div>
+                                            )}
+
+                                            <div className="mt-4 flex flex-wrap gap-3">
+                                                <button
+                                                    type="button"
+                                                    disabled={chargeActionBusy}
+                                                    onClick={() =>
+                                                        void handleChargeAction(
+                                                            currentUserId === request.ownerId ? "owner" : "renter",
+                                                            "ACCEPT",
+                                                        )
+                                                    }
+                                                    className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                        chargeActionBusy
+                                                            ? "bg-zinc-300 text-zinc-600"
+                                                            : "bg-indigo-600 text-white hover:bg-indigo-700"
+                                                    }`}
+                                                >
+                                                    {chargeActionBusy
+                                                        ? "Accepting..."
+                                                        : "Accept Charges"}
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={chargeActionBusy}
+                                                    onClick={() =>
+                                                        void handleChargeAction(
+                                                            currentUserId === request.ownerId ? "owner" : "renter",
+                                                            "REJECT",
+                                                        )
+                                                    }
+                                                    className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                        chargeActionBusy
+                                                            ? "bg-zinc-300 text-zinc-600"
+                                                            : "bg-red-600 text-white hover:bg-red-700"
+                                                    }`}
+                                                >
+                                                    {chargeActionBusy
+                                                        ? "Processing..."
+                                                        : "Reject Charges"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* SEND OFFER */}
 

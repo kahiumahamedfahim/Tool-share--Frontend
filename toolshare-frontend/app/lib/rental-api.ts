@@ -26,6 +26,7 @@ export interface RentalRequest {
     productId: string;
     renterId: string;
     ownerId: string;
+
     startDate: string;
     rentalDays: number;
     endDate: string;
@@ -57,16 +58,7 @@ export interface RentalRequest {
     createdAt: string;
     updatedAt: string;
 
-    /* =====================================================
-       Moderator review decisions
-    ===================================================== */
-
     deliveryFee?: string;
-
-    ownerRentalFee?: string | null;
-    ownerDeliveryFee?: string | null;
-    renterRentalFee?: string | null;
-    renterDeliveryFee?: string | null;
 
     platformCommissionRate?: string;
 
@@ -80,13 +72,19 @@ export interface RentalRequest {
     returnReviewNote?: string | null;
     moderatorReturnReviewedAt?: string | null;
 
-    /* Relation data included by list/detail endpoints */
+    ownerChargesAccepted?: boolean | null;
+    renterChargesAccepted?: boolean | null;
+
+    ownerRentalFee?: string;
+    ownerDeliveryFee?: string;
+    renterRentalFee?: string;
+    renterDeliveryFee?: string;
 
     product?: {
         productId: string;
         name: string;
         pricePerDay: string;
-        negotiationAllowed: boolean;
+        negotiationAllowed?: boolean;
         location: {
             pickupAddress?: string;
         } | null;
@@ -272,8 +270,6 @@ export const updateRentalRequestStatus = async (
 
 /* =========================================================
    Renter's Active Request for a Product
-   Used to prevent duplicate rental requests
-   while the owner has not responded yet.
 ========================================================= */
 
 export interface ActiveRentalRequestInfo {
@@ -283,7 +279,10 @@ export interface ActiveRentalRequestInfo {
         | "PENDING"
         | "NEGOTIATING"
         | "PRICE_AGREED"
+        | "REJECTED"
+        | "EXPIRED"
         | "APPROVED"
+        | "CHARGES_PROPOSED"
         | null;
 }
 
@@ -370,6 +369,78 @@ export const getModeratorRentalRequests = async (
 };
 
 /* =========================================================
+   Renter - Confirm / Reject After Owner Acceptance
+========================================================= */
+
+export const renterRentalRequestAction = async (
+    rentalRequestId: string,
+    action: "CONFIRM" | "REJECT",
+) => {
+    const response =
+        await api.patch<RentalRequest>(
+            `/rentals/${rentalRequestId}/renter-action`,
+            {
+                action,
+            },
+        );
+
+    return response.data;
+};
+
+/* =========================================================
+   Owner / Renter - Reject After Moderator Approval
+========================================================= */
+
+export const rejectAfterApproval = async (
+    rentalRequestId: string,
+    action: "ACCEPT" | "REJECT",
+) => {
+    const response =
+        await api.patch<RentalRequest>(
+            `/rentals/${rentalRequestId}/reject-after-approval`,
+            {
+                action,
+            },
+        );
+
+    return response.data;
+};
+
+/* =========================================================
+   Owner / Renter - Accept / Reject Proposed Charges
+========================================================= */
+
+export const ownerAcceptCharges = async (
+    rentalRequestId: string,
+    action: "ACCEPT" | "REJECT",
+) => {
+    const response =
+        await api.patch<RentalRequest>(
+            `/rentals/${rentalRequestId}/owner-charges`,
+            {
+                action,
+            },
+        );
+
+    return response.data;
+};
+
+export const renterAcceptCharges = async (
+    rentalRequestId: string,
+    action: "ACCEPT" | "REJECT",
+) => {
+    const response =
+        await api.patch<RentalRequest>(
+            `/rentals/${rentalRequestId}/renter-charges`,
+            {
+                action,
+            },
+        );
+
+    return response.data;
+};
+
+/* =========================================================
    Actual Rental (Phase 11)
 ========================================================= */
 
@@ -380,7 +451,6 @@ export interface ActualRental {
     productId: string;
     renterId: string;
     ownerId: string;
-    riderId?: string | null;
 
     startDate: string;
     rentalDays: number;
@@ -388,12 +458,6 @@ export interface ActualRental {
 
     agreedPricePerDay: string;
     deliveryFee: string;
-    ownerRentalFee?: string;
-    ownerDeliveryFee?: string;
-    renterRentalFee?: string;
-    renterDeliveryFee?: string;
-    ownerTotalPayable?: string;
-    renterTotalPayable?: string;
     rentalAmount: string;
     platformCommissionRate: string;
     platformCommissionAmount: string;
@@ -410,82 +474,16 @@ export interface ActualRental {
         | "CANCELLED";
 
     createdAt: string;
+
+    riderId?: string | null;
+
+    ownerRentalFee?: string;
+    ownerDeliveryFee?: string;
+    renterRentalFee?: string;
+    renterDeliveryFee?: string;
+    ownerTotalPayable?: string;
+    renterTotalPayable?: string;
 }
-
-export type RentalChargeStatus =
-    | "PENDING"
-    | "SUBMITTED"
-    | "CONFIRMED"
-    | "REJECTED"
-    | "NO_CHARGE";
-
-export interface RentalChargeEvent {
-    action: "SUBMITTED" | "CONFIRMED" | "REJECTED";
-    actorId: string;
-    paymentMethod?: "CASH" | null;
-    note?: string | null;
-    createdAt: string;
-}
-
-export interface RentalChargeRecord {
-    chargeId: string;
-    rentalId: string;
-    rentalRequestId: string;
-    payerId: string;
-    payerRole: "OWNER" | "RENTER";
-    type: "RENTAL" | "DELIVERY";
-    amount: string;
-    status: RentalChargeStatus;
-    paymentMethod?: "CASH" | null;
-    collectedById?: string | null;
-    collectedAt?: string | null;
-    verifiedById?: string | null;
-    verifiedAt?: string | null;
-    verificationNote?: string | null;
-    events?: RentalChargeEvent[];
-}
-
-export interface RiderChargeCollectionTask extends RentalChargeRecord {
-    payerName: string;
-    productName: string;
-    pickupAddress: string;
-    deliveryAddress: string;
-    dueStage: "DELIVERED_TO_RENTER" | "OWNER_RETURN";
-}
-
-export const getRentalChargesForRequest = async (
-    rentalRequestId: string,
-) => {
-    const response = await api.get<RentalChargeRecord[]>(
-        `/rentals/charges/request/${rentalRequestId}`,
-    );
-    return response.data;
-};
-
-export const getMyRentalChargeTasks = async () => {
-    const response = await api.get<RiderChargeCollectionTask[]>(
-        "/rentals/my-charge-collection-tasks",
-    );
-    return response.data;
-};
-
-export const recordRentalChargeCollection = async (chargeId: string) => {
-    const response = await api.post<RentalChargeRecord>(
-        `/rentals/charge/${chargeId}/collect`,
-    );
-    return response.data;
-};
-
-export const reviewRentalChargeCollection = async (
-    chargeId: string,
-    payload: { approved: boolean; note?: string },
-) => {
-    const response = await api.patch<RentalChargeRecord>(
-        `/rentals/charge/${chargeId}/review`,
-        payload,
-    );
-    return response.data;
-};
 
 export const createActualRental = async (
     rentalRequestId: string,
@@ -509,12 +507,6 @@ export const getActualRentalForRequest = async (
 
         return response.data;
     } catch (literal_error) {
-        /*
-         * No rental created yet — a 404 is
-         * expected until the moderator creates
-         * the rental. Anything else rethrows.
-         */
-
         if (
             isAxiosError(literal_error) &&
             literal_error.response?.status === 404
@@ -528,8 +520,6 @@ export const getActualRentalForRequest = async (
 
 /* =========================================================
    Manual Cash Payment (Phase 12)
-   Rider collects the cash at handover, then
-   hands it to the owner, who confirms.
 ========================================================= */
 
 export interface RentalPaymentInfo {
@@ -589,7 +579,10 @@ export const markPaymentCollected = async (
     paymentId: string,
 ) => {
     const response =
-        await api.patch<PaymentStatusUpdate>(
+        await api.patch<{
+            status: string;
+            collectedAt?: string | null;
+        }>(
             `/rentals/payment/${paymentId}/collect`,
         );
 
@@ -655,10 +648,7 @@ export const getPaymentForRequest = async (
 
 export interface ReviewRentalRequestPayload {
     action: "APPROVE" | "REJECT";
-    ownerRentalFee?: number;
-    ownerDeliveryFee?: number;
-    renterRentalFee?: number;
-    renterDeliveryFee?: number;
+    deliveryFee?: number;
     platformCommissionRate?: number;
     riderId?: string;
 }
@@ -723,6 +713,351 @@ export const submitReturnReview = async (
     const response =
         await api.patch<RentalRequest>(
             `/rentals/moderator/request/${rentalRequestId}/return-review`,
+            payload,
+        );
+
+    return response.data;
+};
+
+/* =========================================================
+   User Management - Admin/Moderator
+========================================================= */
+
+export interface UserInfo {
+    userId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    role: string;
+    status: string;
+    emailVerificationStatus: boolean;
+    createdAt: string;
+    updatedAt: string;
+    address?: string;
+    latitude?: string;
+    longitude?: string;
+}
+
+export interface RentalLog {
+    rentalRequestId: string;
+    productName: string;
+    productId: string;
+    renterName: string;
+    renterId: string;
+    ownerName: string;
+    ownerId: string;
+    startDate: string;
+    endDate: string;
+    rentalDays: number;
+    status: string;
+    agreedPricePerDay: string;
+    createdAt: string;
+    actualRentalStatus: string | null;
+    actualRentalId: string | null;
+}
+
+export const getAllUsers = async (
+    page = 1,
+    limit = 10,
+) => {
+    const response =
+        await api.get<{
+            data: UserInfo[];
+            meta: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        }>(
+            "/users/all",
+            {
+                params: {
+                    page,
+                    limit,
+                },
+            },
+        );
+
+    return response.data;
+};
+
+export const toggleUserStatus = async (
+    userId: string,
+    status: string,
+) => {
+    const response =
+        await api.patch<{
+            userId: string;
+            status: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            role: string;
+        }>(
+            `/users/${userId}/status`,
+            {
+                status,
+            },
+        );
+
+    return response.data;
+};
+
+export const getAllRentalLogs = async (
+    page = 1,
+    limit = 10,
+) => {
+    const response =
+        await api.get<{
+            data: RentalLog[];
+            meta: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        }>(
+            "/users/rental-logs",
+            {
+                params: {
+                    page,
+                    limit,
+                },
+            },
+        );
+
+    return response.data;
+};
+
+/* =========================================================
+   User Profile - Self Service
+========================================================= */
+
+export const getMyProfile = async () => {
+    const response =
+        await api.get<UserInfo>(
+            "/users/me",
+        );
+
+    return response.data;
+};
+
+export const updateMyProfile = async (
+    payload: {
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        address?: string;
+        latitude?: string;
+        longitude?: string;
+    },
+) => {
+    const response =
+        await api.patch<UserInfo>(
+            "/users/me",
+            payload,
+        );
+
+    return response.data;
+};
+
+export const updateMyPassword = async (
+    payload: {
+        currentPassword: string;
+        newPassword: string;
+        confirmPassword: string;
+    },
+) => {
+    const response =
+        await api.patch<{ message: string }>(
+            "/users/me/password",
+            payload,
+        );
+
+    return response.data;
+};
+
+export const getMyDocument = async () => {
+    const response =
+        await api.get<any>(
+            "/users/me/document",
+        );
+
+    return response.data;
+};
+
+export const uploadMyDocument = async (
+    formData: FormData,
+) => {
+    const response =
+        await api.post<{ message: string }>(
+            "/users/me/document",
+            formData,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            },
+        );
+
+    return response.data;
+};
+
+/* =========================================================
+   Moderator - Dashboard Stats
+========================================================= */
+
+export interface ModeratorDashboardStats {
+    totalRentals: number;
+    activeRentals: number;
+    pendingHandoverRentals: number;
+    completedRentals: number;
+    pendingReviews: number;
+}
+
+export const getModeratorDashboardStats = async () => {
+    const response =
+        await api.get<ModeratorDashboardStats>(
+            "/rentals/moderator/dashboard",
+        );
+
+    return response.data;
+};
+
+export const cleanupCompletedRentals = async () => {
+    const response =
+        await api.delete<{
+            deletedRentals: number;
+            cutoffDate: string;
+        }>("/rentals/moderator/cleanup-completed");
+
+    return response.data;
+};
+
+/* =========================================================
+   Rider Charge Collection Tasks
+========================================================= */
+
+export interface RiderChargeCollectionTask {
+    chargeId: string;
+    rentalId: string;
+    rentalRequestId: string;
+    amount: string;
+    method: string;
+    status: string;
+    rental: {
+        rentalId: string;
+        startDate: string;
+        endDate: string;
+        totalPayable: string;
+        deliveryAddress: string;
+        pickupAddress: string;
+    };
+    request: {
+        productId: string;
+        renterId: string;
+        ownerId: string;
+        contactPhone: string;
+    };
+    payerName: string;
+    payerRole: string;
+    type: string;
+    productName: string;
+    dueStage: string;
+    pickupAddress: string;
+    deliveryAddress: string;
+}
+
+export interface RentalChargeRecord {
+    chargeId: string;
+    rentalId: string;
+    amount: string;
+    method: string;
+    status: string;
+    payerRole: string;
+    type: string;
+    paymentMethod: string;
+    collectedAt: string | null;
+    verificationNote: string | null;
+}
+
+export const getMyRentalChargeTasks = async () => {
+    const response =
+        await api.get<RiderChargeCollectionTask[]>(
+            "/rentals/my-charge-collection-tasks",
+        );
+
+    return response.data;
+};
+
+export const recordRentalChargeCollection = async (
+    chargeId: string,
+) => {
+    const response =
+        await api.post<RiderChargeCollectionTask>(
+            `/rentals/charge/${chargeId}/collect`,
+        );
+
+    return response.data;
+};
+
+export const getRentalChargesForRequest = async (
+    rentalRequestId: string,
+    userId: string,
+    userRole: string,
+) => {
+    const response =
+        await api.get<RentalChargeRecord[]>(
+            `/rentals/charges/request/${rentalRequestId}`,
+        );
+
+    return response.data;
+};
+
+export const reviewRentalChargeCollection = async (
+    chargeId: string,
+    payload: {
+        approved: boolean;
+        note?: string;
+    },
+) => {
+    const response =
+        await api.patch<RiderChargeCollectionTask>(
+            `/rentals/charge/${chargeId}/review`,
+            payload,
+        );
+
+    return response.data;
+};
+
+/* =========================================================
+   User - Forgot Password / Reset Password
+========================================================= */
+
+export const forgotPassword = async (
+    email: string,
+) => {
+    const response =
+        await api.post<{ message: string }>(
+            "/users/forgot-password",
+            { email },
+        );
+
+    return response.data;
+};
+
+export const resetPassword = async (
+    payload: {
+        email: string;
+        verificationCode: string;
+        newPassword: string;
+    },
+) => {
+    const response =
+        await api.patch<{ message: string }>(
+            "/users/reset-password",
             payload,
         );
 
