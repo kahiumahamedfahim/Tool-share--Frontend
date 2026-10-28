@@ -60,7 +60,7 @@ export default function AdminNavbar()
         },
         {
             label: "Document Verification",
-            href: "/admin/document-verification",
+            href: "/documents",
         },
         {
             label: "Pending Documents",
@@ -70,6 +70,10 @@ export default function AdminNavbar()
 
 
     const documentItems = [
+        {
+            label: "All Pending Documents",
+            href: "/documents",
+        },
         {
             label: "Admin Documents",
             href: "/admin/pending-documents",
@@ -525,6 +529,13 @@ export default function AdminNavbar()
                         {/* ================================================== */}
 
                         <Link
+                            href="/users/profile"
+                            className="ml-1 rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition hover:bg-blue-50 hover:text-blue-700"
+                        >
+                            Profile
+                        </Link>
+
+                        <Link
                             href="/logout"
                             className="ml-1 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 hover:text-red-700"
                         >
@@ -543,9 +554,13 @@ export default function AdminNavbar()
 
                         {/* Profile */}
 
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-600">
+                        <Link
+                            href="/users/profile"
+                            aria-label="Open profile"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-600 hover:bg-blue-100"
+                        >
                             A
-                        </div>
+                        </Link>
 
 
                         {/* Mobile Notification */}
@@ -728,6 +743,15 @@ export default function AdminNavbar()
 
 
                             {/* Logout */}
+
+                            <Link
+                                href="/users/profile"
+                                onClick={closeMenu}
+                                className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-medium text-zinc-700 transition hover:bg-blue-50 hover:text-blue-700"
+                            >
+                                <span>Profile &amp; Settings</span>
+                                <span aria-hidden="true">→</span>
+                            </Link>
 
                             <Link
                                 href="/logout"

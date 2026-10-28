@@ -7,8 +7,10 @@ import { isAxiosError } from "axios";
 import ModeratorNavbar from "../../components/moderator/ModeratorNavbar";
 import {
     cleanupCompletedRentals,
+    getAllRentalLogs,
     getModeratorDashboardStats,
     type ModeratorDashboardStats,
+    type RentalLog,
 } from "../../lib/rental-api";
 
 /* Helper - Date */
@@ -21,6 +23,7 @@ const formatDate = (value: string) =>
 
 export default function ModeratorDashboardPage() {
     const [stats, setStats] = useState<ModeratorDashboardStats | null>(null);
+    const [recentRentals, setRecentRentals] = useState<RentalLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [cleanupLoading, setCleanupLoading] = useState(false);
@@ -35,8 +38,12 @@ export default function ModeratorDashboardPage() {
                 setLoading(true);
                 setError("");
 
-                const data = await getModeratorDashboardStats();
+                const [data, rentals] = await Promise.all([
+                    getModeratorDashboardStats(),
+                    getAllRentalLogs(1, 5),
+                ]);
                 setStats(data);
+                setRecentRentals(rentals.data);
             } catch (err) {
                 console.error(
                     "Failed to load moderator dashboard stats:",
@@ -77,7 +84,12 @@ export default function ModeratorDashboardPage() {
 
             const data = await cleanupCompletedRentals();
             setCleanupResult(data);
-            // Stats will refresh via the page re-rendering after state update
+            const [updatedStats, updatedRentals] = await Promise.all([
+                getModeratorDashboardStats(),
+                getAllRentalLogs(1, 5),
+            ]);
+            setStats(updatedStats);
+            setRecentRentals(updatedRentals.data);
         } catch (err) {
             console.error("Cleanup failed:", err);
 
@@ -147,33 +159,28 @@ export default function ModeratorDashboardPage() {
                 <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                     <StatCard
                         label="Total Rentals"
-                        value={stats?.totalRentals ?? 0}
-                        icon="📦"
-                        className="border-blue-200 bg-blue-50 text-blue-700"
+                        value={stats?.totalRentals ?? null}
+                        tone="blue"
                     />
                     <StatCard
                         label="Active Rentals"
-                        value={stats?.activeRentals ?? 0}
-                        icon="🔄"
-                        className="border-indigo-200 bg-indigo-50 text-indigo-700"
+                        value={stats?.activeRentals ?? null}
+                        tone="blue"
                     />
                     <StatCard
                         label="Pending Handover"
-                        value={stats?.pendingHandoverRentals ?? 0}
-                        icon="⏳"
-                        className="border-amber-200 bg-amber-50 text-amber-700"
+                        value={stats?.pendingHandoverRentals ?? null}
+                        tone="amber"
                     />
                     <StatCard
                         label="Completed"
-                        value={stats?.completedRentals ?? 0}
-                        icon="✅"
-                        className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                        value={stats?.completedRentals ?? null}
+                        tone="green"
                     />
                     <StatCard
                         label="Pending Review"
-                        value={stats?.pendingReviews ?? 0}
-                        icon="📋"
-                        className="border-violet-200 bg-violet-50 text-violet-700"
+                        value={stats?.pendingReviews ?? null}
+                        tone="blue"
                     />
                 </div>
 
@@ -244,8 +251,7 @@ export default function ModeratorDashboardPage() {
                         Recent Rentals
                     </h2>
                     <p className="mt-1 text-sm text-zinc-500">
-                        Track custody progress and rider assignments
-                        across all active rentals.
+                        Review the latest requests and open a record to inspect its status and custody details.
                     </p>
 
                     <div className="mt-4 overflow-x-auto">
@@ -257,24 +263,24 @@ export default function ModeratorDashboardPage() {
                                     <th className="pb-3 font-medium">Renter</th>
                                     <th className="pb-3 font-medium">Owner</th>
                                     <th className="pb-3 font-medium">Status</th>
-                                    <th className="pb-3 font-medium">Rider</th>
                                     <th className="pb-3 font-medium">Dates</th>
+                                    <th className="pb-3 text-right font-medium">Details</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td className="py-4 text-sm text-zinc-900">REQ-001</td>
-                                    <td className="py-4 text-sm text-zinc-900">Power Drill</td>
-                                    <td className="py-4 text-sm text-zinc-600">renter@example.com</td>
-                                    <td className="py-4 text-sm text-zinc-600">owner@example.com</td>
-                                    <td className="py-4">
-                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                                            Active
-                                        </span>
-                                    </td>
-                                    <td className="py-4 text-sm text-zinc-600">rider@example.com</td>
-                                    <td className="py-4 text-sm text-zinc-600">22/10/26 → 30/10/26</td>
-                                </tr>
+                            <tbody className="divide-y divide-slate-100">
+                                {recentRentals.length === 0 ? (
+                                    <tr><td className="py-10 text-center text-sm text-slate-500" colSpan={7}>No rental activity to show yet.</td></tr>
+                                ) : recentRentals.map((rental) => (
+                                    <tr key={rental.rentalRequestId} className="transition hover:bg-slate-50">
+                                        <td className="whitespace-nowrap py-4 pr-4 text-xs font-medium text-slate-600">{rental.rentalRequestId.slice(0, 8)}</td>
+                                        <td className="min-w-36 py-4 pr-4 text-sm font-medium text-slate-900">{rental.productName}</td>
+                                        <td className="py-4 pr-4 text-sm text-slate-600">{rental.renterName}</td>
+                                        <td className="py-4 pr-4 text-sm text-slate-600">{rental.ownerName}</td>
+                                        <td className="py-4 pr-4"><StatusPill status={rental.status} /></td>
+                                        <td className="py-4 pr-4 text-sm text-slate-600">{rental.startDate ? formatDate(rental.startDate) : "—"} – {rental.endDate ? formatDate(rental.endDate) : "—"}</td>
+                                        <td className="py-4 text-right"><Link href={`/rentals/request/${rental.rentalRequestId}`} className="text-sm font-semibold text-blue-700 hover:text-blue-900">Open</Link></td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
@@ -337,30 +343,29 @@ export default function ModeratorDashboardPage() {
 function StatCard({
     label,
     value,
-    icon,
-    className,
+    tone,
 }: {
     label: string;
-    value: number;
-    icon: string;
-    className: string;
+    value: number | null;
+    tone: "blue" | "amber" | "green";
 }) {
+    const accent = tone === "amber" ? "border-l-amber-400" : tone === "green" ? "border-l-emerald-500" : "border-l-blue-600";
     return (
-        <div className={`rounded-xl border p-5 shadow-sm ${className}`}>
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                        {label}
-                    </p>
-                    <p className="mt-1 text-2xl font-bold text-slate-900">
-                        {value}
-                    </p>
-                </div>
-
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/50">
-                    {icon}
-                </div>
-            </div>
+        <div className={`rounded-xl border border-slate-200 border-l-[3px] bg-white p-5 shadow-sm ${accent}`}>
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{label}</p>
+            <p className="mt-3 text-3xl font-semibold tabular-nums tracking-tight text-slate-950">{value ?? "—"}</p>
         </div>
     );
+}
+
+function StatusPill({ status }: { status: string }) {
+    const normalized = status.toUpperCase();
+    const tone = normalized === "APPROVED" || normalized === "COMPLETED" || normalized === "ACTIVE"
+        ? "bg-emerald-50 text-emerald-800"
+        : normalized === "PENDING" || normalized === "NEGOTIATING"
+          ? "bg-amber-50 text-amber-800"
+          : normalized === "REJECTED" || normalized === "CANCELLED"
+            ? "bg-red-50 text-red-800"
+            : "bg-slate-100 text-slate-700";
+    return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{status.replaceAll("_", " ")}</span>;
 }

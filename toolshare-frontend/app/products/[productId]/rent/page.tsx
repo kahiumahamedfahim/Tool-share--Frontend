@@ -78,6 +78,32 @@ interface ApiProductResponse {
 export default function CreateRentalRequestPage() {
     const params = useParams();
     const router = useRouter();
+    const [authChecking, setAuthChecking] = useState(true);
+    useEffect(() => {
+    const checkUserAccess = async () => {
+        try {
+            const response = await api.get("/auth/profile", 
+                {
+                withCredentials: true,
+            });
+
+            const role = response.data.role;
+
+            if (role !== "USER") {
+                router.replace("/login");
+                return;
+            }
+
+            setAuthChecking(false);
+        } catch (error) {
+            console.error("Authentication check failed:", error);
+
+            router.replace("/login");
+        }
+    };
+
+    checkUserAccess();
+}, [router]);
 
     const productId = params?.productId as string;
 
@@ -137,6 +163,7 @@ export default function CreateRentalRequestPage() {
 
     const [success, setSuccess] =
         useState("");
+        
 
     /* =================================================
        EXISTING ACTIVE REQUEST
@@ -725,7 +752,7 @@ export default function CreateRentalRequestPage() {
 
             NEGOTIATING: {
                 label: "Negotiation in progress",
-                tone: "border-indigo-200 bg-indigo-50 text-indigo-700",
+                tone: "border-blue-200 bg-blue-50 text-blue-700",
             },
 
             PRICE_AGREED: {
@@ -803,7 +830,7 @@ export default function CreateRentalRequestPage() {
                                                 `/rentals/request/${activeRequest.rentalRequestId}`,
                                             )
                                         }
-                                        className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                                        className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
                                     >
                                         View my request
                                     </button>
@@ -859,8 +886,8 @@ export default function CreateRentalRequestPage() {
 
                         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                             <div>
-                                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
+                                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
 
                                     Rental Request
                                 </div>
@@ -976,7 +1003,7 @@ export default function CreateRentalRequestPage() {
                             <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                                 <div className="border-b border-slate-100 px-6 py-5">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
                                             📅
                                         </div>
 
@@ -1015,7 +1042,7 @@ export default function CreateRentalRequestPage() {
                                                             .value,
                                                     )
                                                 }
-                                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                                             />
                                         </div>
 
@@ -1047,7 +1074,7 @@ export default function CreateRentalRequestPage() {
                                                             ),
                                                         )
                                                     }
-                                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-16 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-16 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                                                 />
 
                                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">
@@ -1065,20 +1092,20 @@ export default function CreateRentalRequestPage() {
                                     </div>
 
                                     {calculatedEndDate && (
-                                        <div className="mt-5 flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50 px-5 py-4">
+                                        <div className="mt-5 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-5 py-4">
                                             <div>
-                                                <p className="text-xs font-medium text-indigo-600">
+                                                <p className="text-xs font-medium text-blue-600">
                                                     Expected return
                                                 </p>
 
-                                                <p className="mt-1 text-sm font-semibold text-indigo-950">
+                                                <p className="mt-1 text-sm font-semibold text-blue-950">
                                                     {
                                                         calculatedEndDate
                                                     }
                                                 </p>
                                             </div>
 
-                                            <span className="text-indigo-600">
+                                            <span className="text-blue-600">
                                                 →
                                             </span>
                                         </div>
@@ -1091,7 +1118,7 @@ export default function CreateRentalRequestPage() {
                                 <div className="border-b border-slate-100 px-6 py-5">
                                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
                                                 ◉
                                             </div>
 
@@ -1115,7 +1142,7 @@ export default function CreateRentalRequestPage() {
                                             disabled={
                                                 locationLoading
                                             }
-                                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
                                             {locationLoading
                                                 ? "Detecting..."
@@ -1199,7 +1226,7 @@ export default function CreateRentalRequestPage() {
                                             }
                                             rows={3}
                                             placeholder="Use your location or select a point on the map"
-                                            className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                                            className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                                         />
 
                                         <p className="mt-2 text-xs text-slate-400">
@@ -1252,7 +1279,7 @@ export default function CreateRentalRequestPage() {
                                             )
                                         }
                                         placeholder="01XXXXXXXXX"
-                                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                                     />
                                 </div>
                             </section>
@@ -1327,7 +1354,7 @@ export default function CreateRentalRequestPage() {
                                                     placeholder={String(
                                                         listedPricePerDay,
                                                     )}
-                                                    className="w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-9 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                                                    className="w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-9 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                                                 />
                                             </div>
 
@@ -1388,7 +1415,7 @@ export default function CreateRentalRequestPage() {
                                                 )
                                             }
                                             placeholder="Add a message for the product owner..."
-                                            className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                                            className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                                         />
                                     </div>
                                 </div>
@@ -1542,8 +1569,8 @@ export default function CreateRentalRequestPage() {
                                         </div>
                                     </div>
 
-                                    <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-5">
-                                        <p className="text-xs font-medium text-indigo-600">
+                                    <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
+                                        <p className="text-xs font-medium text-blue-600">
                                             Estimated rental amount
                                         </p>
 
@@ -1564,11 +1591,11 @@ export default function CreateRentalRequestPage() {
                                         disabled={
                                             submitting
                                         }
-                                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         {submitting ? (
                                             <>
-                                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-300 border-t-white" />
+                                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-300 border-t-white" />
 
                                                 Submitting...
                                             </>

@@ -202,7 +202,7 @@ function RequestCard({
     return (
         <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/50">
             {/* Top accent */}
-            <div className="h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-400" />
+            <div className="h-1 bg-blue-600" />
 
             <div className="p-6 sm:p-7">
                 {/* Header */}

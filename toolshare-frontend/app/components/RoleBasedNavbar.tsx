@@ -6,6 +6,7 @@ import AdminNavbar from "@/app/components/admin/AdminNavbar";
 import ModeratorNavbar from "@/app/components/moderator/ModeratorNavbar";
 import UserNavbar from "@/app/components/user/usernavbar";
 import RiderNavbar from "@/app/components/rider/RiderNavbar";
+import GuestNavbar from "@/app/components/guest/GuestNavbar";
 
 export default function RoleBasedNavbar() {
     const [userRole, setUserRole] = useState<
@@ -40,6 +41,5 @@ export default function RoleBasedNavbar() {
     if (userRole === "RIDER") {
         return <RiderNavbar />;
     }
-
-    return null;
+    return <GuestNavbar/>
 }

@@ -22,7 +22,9 @@ export default function LogoutPage() {
           "Logout failed:",
           error,
         );
-      } finally {
+      } finally 
+      {
+        localStorage.removeItem("userRole")
         router.replace("/login");
       }
     };

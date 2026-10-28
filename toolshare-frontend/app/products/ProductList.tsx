@@ -131,26 +131,28 @@ export default function ProductList() {
 
     if (isLoading) {
         return (
-            <section className="min-h-screen w-full bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
-                <h1 className="mb-6 text-2xl font-bold text-gray-900">
-                    Products
-                </h1>
+            <section className="ts-container min-h-[calc(100vh-4rem)] py-10">
+                <div className="mb-8 max-w-2xl">
+                    <p className="text-sm font-semibold text-primary">ToolShare marketplace</p>
+                    <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Find a tool for your next project</h1>
+                    <p className="mt-3 text-sm leading-6 text-slate-600">Explore equipment shared by people in your community.</p>
+                </div>
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {Array.from({ length: 8 }).map(
                         (_, index) => (
                             <div
                                 key={index}
-                                className="animate-pulse overflow-hidden rounded-xl border border-gray-200 bg-white"
+                                className="animate-pulse overflow-hidden rounded-2xl border border-slate-200 bg-white"
                             >
-                                <div className="h-48 bg-gray-200" />
+                                <div className="aspect-[4/3] bg-slate-200" />
 
                                 <div className="space-y-3 p-4">
-                                    <div className="h-4 w-3/4 rounded bg-gray-200" />
+                                    <div className="h-4 w-3/4 rounded bg-slate-200" />
 
-                                    <div className="h-3 rounded bg-gray-200" />
+                                    <div className="h-3 rounded bg-slate-200" />
 
-                                    <div className="h-3 w-1/2 rounded bg-gray-200" />
+                                    <div className="h-3 w-1/2 rounded bg-slate-200" />
                                 </div>
                             </div>
                         ),
@@ -161,26 +163,24 @@ export default function ProductList() {
     }
 
     return (
-        <section className="mx-auto w-full max-w-7xl bg-gray-50 px-4 py-8 text-gray-900 sm:px-6 lg:px-8">
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <section className="ts-container min-h-[calc(100vh-4rem)] py-10 text-foreground sm:py-12">
+            <div className="mb-8 flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
-                        Products
-                    </h1>
+                    <p className="text-sm font-semibold text-primary">ToolShare marketplace</p>
+                    <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Find a tool for your next project</h1>
 
-                    <p className="mt-1 text-sm text-gray-600">
-                        Explore products available to rent on ToolShare.
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                        Explore equipment shared by people in your community.
                     </p>
 
                     {!error && (
-                        <p className="mt-2 text-xs text-gray-500">
-                            {meta.total} product
-                            {meta.total === 1 ? "" : "s"} found
+                        <p className="mt-3 text-sm text-slate-500">
+                            <span className="font-semibold tabular-nums text-slate-800">{meta.total}</span> listing{meta.total === 1 ? "" : "s"}
                         </p>
                     )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:self-auto">
                     <label
                         htmlFor="products-page-size"
                         className="text-sm text-gray-600"
@@ -197,7 +197,7 @@ export default function ProductList() {
                                 Number(event.target.value),
                             );
                         }}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        className="ts-input min-h-10 w-auto rounded-lg px-3 py-2 text-sm"
                     >
                         <option value={8}>8</option>
                         <option value={12}>12</option>
@@ -205,7 +205,7 @@ export default function ProductList() {
                         <option value={48}>48</option>
                     </select>
 
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-slate-600">
                         per page
                     </span>
                 </div>
@@ -214,7 +214,7 @@ export default function ProductList() {
             {error && (
                 <div
                     role="alert"
-                    className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                    className="mb-6 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between"
                 >
                     <p>{error}</p>
 
@@ -223,7 +223,7 @@ export default function ProductList() {
                         onClick={() =>
                             void fetchProducts()
                         }
-                        className="mt-3 rounded-md bg-red-600 px-3 py-2 font-medium text-white hover:bg-red-700"
+                        className="w-fit rounded-lg bg-red-700 px-4 py-2.5 font-semibold text-white hover:bg-red-800"
                     >
                         Try again
                     </button>
@@ -231,13 +231,14 @@ export default function ProductList() {
             )}
 
             {!error && products.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-                    <h2 className="text-lg font-semibold text-gray-900">
-                        No products found
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+                    <div aria-hidden="true" className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500">⌕</div>
+                    <h2 className="mt-4 text-lg font-semibold text-slate-950">
+                        Nothing to show yet
                     </h2>
 
-                    <p className="mt-2 text-sm text-gray-600">
-                        There are no products to display on this page yet.
+                    <p className="mt-2 text-sm text-slate-600">
+                        No available listings match this page right now. Check back soon.
                     </p>
                 </div>
             ) : (
@@ -264,60 +265,51 @@ export default function ProductList() {
                                         product.productId ||
                                         product.id
                                     }
-                                    className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
                                 >
                                     <Link
                                         href={detailsUrl}
                                         aria-label={`View ${product.name}`}
                                     >
-                                        <div className="flex h-48 items-center justify-center overflow-hidden bg-gray-100">
+                                        <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
                                             {imageUrl ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
                                                 <img
                                                     src={imageUrl}
                                                     alt={product.name}
                                                     loading="lazy"
-                                                    className="h-full w-full object-cover"
+                                                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                                                 />
                                             ) : (
-                                                <span className="text-sm text-gray-400">
+                                                <span className="text-sm text-slate-400">
                                                     No image available
                                                 </span>
                                             )}
+                                            <span className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${available ? "bg-white/95 text-emerald-800" : "bg-white/95 text-slate-600"}`}>
+                                                {status.replaceAll("_", " ")}
+                                            </span>
                                         </div>
                                     </Link>
 
-                                    <div className="flex flex-1 flex-col p-4">
+                                    <div className="flex flex-1 flex-col p-4 sm:p-5">
                                         <div className="mb-2 flex items-start justify-between gap-2">
-                                            <h2 className="line-clamp-1 text-base font-semibold text-gray-900">
+                                            <h2 className="line-clamp-2 min-h-12 text-base font-semibold leading-6 tracking-tight text-slate-950">
                                                 <Link
                                                     href={detailsUrl}
-                                                    className="hover:text-blue-700"
+                                                    className="transition hover:text-primary"
                                                 >
                                                     {product.name}
                                                 </Link>
                                             </h2>
 
-                                            <span
-                                                className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
-                                                    available
-                                                        ? "bg-green-100 text-green-700"
-                                                        : "bg-gray-100 text-gray-600"
-                                                }`}
-                                            >
-                                                {status.replaceAll(
-                                                    "_",
-                                                    " ",
-                                                )}
-                                            </span>
                                         </div>
 
-                                        <p className="mb-3 line-clamp-3 min-h-[3.75rem] text-sm leading-5 text-gray-600">
+                                        <p className="mb-4 line-clamp-2 min-h-10 text-sm leading-5 text-slate-600">
                                             {product.description ||
                                                 "No description provided."}
                                         </p>
 
-                                        <p className="mb-3 text-lg font-bold text-gray-900">
+                                        <p className="mb-4 text-xl font-semibold tracking-tight text-slate-950">
                                             ৳
                                             {formatPrice(
                                                 product.pricePerDay,
@@ -330,7 +322,7 @@ export default function ProductList() {
 
                                         <div className="mb-4 flex flex-wrap gap-2">
                                             {product.category?.name && (
-                                                <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                                                <span className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-800">
                                                     {
                                                         product
                                                             .category
@@ -340,10 +332,10 @@ export default function ProductList() {
                                             )}
 
                                             <span
-                                                className={`rounded-md px-2 py-1 text-xs font-medium ${
+                                                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${
                                                     product.negotiationAllowed
-                                                        ? "bg-amber-50 text-amber-700"
-                                                        : "bg-gray-100 text-gray-600"
+                                                        ? "bg-amber-50 text-amber-800"
+                                                        : "bg-slate-100 text-slate-600"
                                                 }`}
                                             >
                                                 {product.negotiationAllowed
@@ -352,9 +344,16 @@ export default function ProductList() {
                                             </span>
                                         </div>
 
+                                        {product.location?.district && (
+                                            <p className="mb-4 flex items-center gap-1.5 text-xs text-slate-500">
+                                                <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4"><path d="M16 8.3c0 4.2-6 9-6 9s-6-4.8-6-9a6 6 0 1 1 12 0Z" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/></svg>
+                                                {product.location.upazila ? `${product.location.upazila}, ` : ""}{product.location.district}
+                                            </p>
+                                        )}
+
                                         <Link
                                             href={detailsUrl}
-                                            className="mt-auto inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                            className="ts-button-primary mt-auto w-full"
                                         >
                                             View details
                                         </Link>

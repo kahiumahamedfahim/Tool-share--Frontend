@@ -7,6 +7,25 @@ const MAX_DOCUMENTS = 5;
 const MAX_RENTAL_DAYS = 30;
 const MAX_BUFFER_DAYS = 30;
 
+// datetime-local inputs contain a local timestamp without a timezone. Convert
+// those values to UTC ISO strings before validating/submitting them.
+const dateTimeField = z.preprocess(
+    (value) => {
+        if (value === undefined || value === null || value === "") {
+            return undefined;
+        }
+
+        const input = String(value);
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(input)) {
+            const date = new Date(input);
+            return Number.isNaN(date.getTime()) ? input : date.toISOString();
+        }
+
+        return input;
+    },
+    z.string().datetime({ offset: true }).optional().nullable(),
+);
+
 const allowedImageTypes = [
     "image/jpeg",
     "image/png",
@@ -94,86 +113,13 @@ export const createProductSchema = z
 
         allowSameDayRental: z.boolean(),
 
-        // Owner-chosen date windows (optional ISO strings)
-        rentalWindowStart: z.preprocess(
-            (value) =>
-                value === undefined || value === null || value === ""
-                    ? undefined
-                    : String(value),
-            z.string().datetime({ offset: true }).optional().nullable(),
-        ),
-        rentalWindowEnd: z.preprocess(
-            (value) =>
-                value === undefined || value === null || value === ""
-                    ? undefined
-                    : String(value),
-            z.string().datetime({ offset: true }).optional().nullable(),
-        ),
-        deliveryWindowStart: z.preprocess(
-            (value) =>
-                value === undefined || value === null || value === ""
-                    ? undefined
-                    : String(value),
-            z.string().datetime({ offset: true }).optional().nullable(),
-        ),
-        deliveryWindowEnd: z.preprocess(
-            (value) =>
-                value === undefined || value === null || value === ""
-                    ? undefined
-                    : String(value),
-            z.string().datetime({ offset: true }).optional().nullable(),
-        ),
-        returnWindowStart: z.preprocess(
-            (value) =>
-                value === undefined || value === null || value === ""
-                    ? undefined
-                    : String(value),
-            z.string().datetime({ offset: true }).optional().nullable(),
-        ),
-        returnWindowEnd: z.preprocess(
-            (value) =>
-                value === undefined || value === null || value === ""
-                    ? undefined
-                    : String(value),
-            z.string().datetime({ offset: true }).optional().nullable(),
-        ),
-
-        // Platform fee percentage per day (default 10)
-        platformFeePercentage: z.preprocess(
-            (value) =>
-                value === undefined || value === null || value === ""
-                    ? undefined
-                    : String(value),
-            z.string()
-                .optional()
-                .refine(
-                    (value) =>
-                        value === undefined ||
-                        (/^\d+(\.\d{1,2})?$/.test(value) &&
-                            Number.isFinite(Number(value)) &&
-                            Number(value) >= 0 &&
-                            Number(value) <= 100),
-                    "Platform fee must be between 0 and 100.",
-                ),
-        ),
-
-        // Base delivery fee
-        deliveryFeeBase: z.preprocess(
-            (value) =>
-                value === undefined || value === null || value === ""
-                    ? undefined
-                    : String(value),
-            z.string()
-                .optional()
-                .refine(
-                    (value) =>
-                        value === undefined ||
-                        (/^\d+(\.\d{1,2})?$/.test(value) &&
-                            Number.isFinite(Number(value)) &&
-                            Number(value) >= 0),
-                    "Delivery fee must be a positive number.",
-                ),
-        ),
+        // Owner-chosen windows come from datetime-local inputs.
+        rentalWindowStart: dateTimeField,
+        rentalWindowEnd: dateTimeField,
+        deliveryWindowStart: dateTimeField,
+        deliveryWindowEnd: dateTimeField,
+        returnWindowStart: dateTimeField,
+        returnWindowEnd: dateTimeField,
 
         // Product images
 

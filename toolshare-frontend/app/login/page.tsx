@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loading from "@/app/components/Loading";
@@ -76,7 +77,7 @@ finally
 };
 
 return (
-  <main className="relative flex h-screen items-center justify-center bg-zinc-50 px-6">
+  <main className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_50%_0%,oklch(0.95_0.04_250),transparent_45%),var(--background)] px-4 py-10 sm:px-6">
     <Loading show={loading} />
      <ErrorMessage
     show={!!error}
@@ -84,14 +85,17 @@ return (
     onClose={() => setError("")}
   />
 
-    <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+    <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-35px_rgba(15,35,70,0.28)] sm:p-8">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-zinc-900">
+        <Link href="/" className="text-sm font-bold tracking-tight text-slate-950">
+          Tool<span className="text-primary">Share</span>
+        </Link>
+        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">
           Welcome to Tool<span className="text-blue-600">Share</span>
         </h1>
 
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-slate-600">
           Sign in to your account
         </p>
       </div>
@@ -105,7 +109,7 @@ return (
         <div>
           <label
             htmlFor="email"
-            className="mb-2 block text-sm font-medium text-zinc-700"
+            className="mb-2 block text-sm font-semibold text-slate-700"
           >
             Email
           </label>
@@ -116,7 +120,7 @@ return (
             placeholder="Enter your email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="ts-input"
           />
         </div>
 
@@ -124,7 +128,7 @@ return (
         <div>
           <label
             htmlFor="password"
-            className="mb-2 block text-sm font-medium text-zinc-700"
+            className="mb-2 block text-sm font-semibold text-slate-700"
           >
             Password
           </label>
@@ -136,7 +140,7 @@ return (
               placeholder="Enter your password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-             className="w-full rounded-lg border border-zinc-300 px-4 py-3 pr-20 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+             className="ts-input pr-20"
 />
             <button
               type="button"
@@ -145,6 +149,14 @@ return (
             >
               {showPassword ? "Hide" : "Show"}
             </button>
+          </div>
+          <div className="mt-2 text-right">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              Forgot password?
+            </Link>
           </div>
         </div>
 
@@ -159,14 +171,14 @@ return (
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="ts-button-primary w-full"
         >
           {loading ? "Logging in..." : "Login"}
         </button>
       </form>
 
       {/* Register */}
-      <p className="mt-6 text-center text-sm text-zinc-500">
+      <p className="mt-6 text-center text-sm text-slate-600">
         Don&apos;t have an account?{" "}
         <a
           href="/register"

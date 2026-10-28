@@ -739,6 +739,32 @@ export interface UserInfo {
     longitude?: string;
 }
 
+export interface PendingUserDocument {
+    id: string;
+    userId: string;
+    profileImage: string | null;
+    nidNumber: string | null;
+    nidFrontImage: string | null;
+    nidBackImage: string | null;
+    drivingLicenseNumber: string | null;
+    drivingLicenseFrontImage: string | null;
+    drivingLicenseBackImage: string | null;
+    vehicleImage: string | null;
+    vehicleNumber: string | null;
+    vehicleType: string | null;
+    verificationStatus: string;
+    documentVerifiedBy: string | null;
+    documentVerifiedAt: string | null;
+    rejectionReason: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export const getPendingUserDocuments = async () => {
+    const response = await api.get<PendingUserDocument[]>("/users/documents");
+    return response.data;
+};
+
 export interface RentalLog {
     rentalRequestId: string;
     productName: string;

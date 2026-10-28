@@ -64,9 +64,9 @@ export default function UserNavbar() {
                     <Link
                         href="/dashboard/user"
                         onClick={closeMenu}
-                        className="text-xl font-bold tracking-tight text-slate-950 transition hover:text-indigo-600"
+                        className="text-xl font-bold tracking-tight text-slate-950 transition hover:text-blue-600"
                     >
-                        Tool<span className="text-indigo-600">Share</span>
+                        Tool<span className="text-blue-600">Share</span>
                     </Link>
 
                     {/* =================================
@@ -81,7 +81,7 @@ export default function UserNavbar() {
                             href="/dashboard/user"
                             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
                                 pathname === "/dashboard/user"
-                                    ? "bg-indigo-50 text-indigo-700"
+                                    ? "bg-blue-50 text-blue-700"
                                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                             }`}
                         >
@@ -94,7 +94,7 @@ export default function UserNavbar() {
                             href="/products"
                             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
                                 isProductsActive
-                                    ? "bg-indigo-50 text-indigo-700"
+                                    ? "bg-blue-50 text-blue-700"
                                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                             }`}
                         >
@@ -107,7 +107,7 @@ export default function UserNavbar() {
                             href="/products/my-products"
                             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
                                 isMyProductsActive
-                                    ? "bg-indigo-50 text-indigo-700"
+                                    ? "bg-blue-50 text-blue-700"
                                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                             }`}
                         >
@@ -120,7 +120,7 @@ export default function UserNavbar() {
                             href="/products/create"
                             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
                                 isCreateProductActive
-                                    ? "bg-indigo-50 text-indigo-700"
+                                    ? "bg-blue-50 text-blue-700"
                                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                             }`}
                         >
@@ -133,7 +133,7 @@ export default function UserNavbar() {
                             href="/rentals/my-requests"
                             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
                                 isMyRentalsActive
-                                    ? "bg-indigo-50 text-indigo-700"
+                                    ? "bg-blue-50 text-blue-700"
                                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                             }`}
                         >
@@ -146,7 +146,7 @@ export default function UserNavbar() {
                             href="/rentals/owner-requests"
                             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
                                 isOwnerRequestsActive
-                                    ? "bg-indigo-50 text-indigo-700"
+                                    ? "bg-blue-50 text-blue-700"
                                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                             }`}
                         >
@@ -158,6 +158,18 @@ export default function UserNavbar() {
                         <div className="ml-1">
                             <NotificationBell />
                         </div>
+
+                        <Link
+                            href="/users/profile"
+                            aria-current={isActive("/users/profile") ? "page" : undefined}
+                            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                isActive("/users/profile")
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                            }`}
+                        >
+                            Profile
+                        </Link>
 
                         {/* Logout */}
 
@@ -181,9 +193,13 @@ export default function UserNavbar() {
 
                         {/* Profile */}
 
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-sm font-bold text-indigo-700">
+                        <Link
+                            href="/users/profile"
+                            aria-label="Open profile"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-700 hover:bg-blue-100"
+                        >
                             U
-                        </div>
+                        </Link>
 
                         {/* Menu */}
 
@@ -217,7 +233,7 @@ export default function UserNavbar() {
                                 onClick={closeMenu}
                                 className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
                                     pathname === "/dashboard/user"
-                                        ? "bg-indigo-50 text-indigo-700"
+                                        ? "bg-blue-50 text-blue-700"
                                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                                 }`}
                             >
@@ -227,7 +243,7 @@ export default function UserNavbar() {
 
                                 {pathname ===
                                     "/dashboard/user" && (
-                                    <span className="text-xs text-indigo-600">
+                                    <span className="text-xs text-blue-600">
                                         ●
                                     </span>
                                 )}
@@ -242,7 +258,7 @@ export default function UserNavbar() {
                                 onClick={closeMenu}
                                 className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
                                     isProductsActive
-                                        ? "bg-indigo-50 text-indigo-700"
+                                        ? "bg-blue-50 text-blue-700"
                                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                                 }`}
                             >
@@ -251,7 +267,7 @@ export default function UserNavbar() {
                                 </span>
 
                                 {isProductsActive && (
-                                    <span className="text-xs text-indigo-600">
+                                    <span className="text-xs text-blue-600">
                                         ●
                                     </span>
                                 )}
@@ -264,7 +280,7 @@ export default function UserNavbar() {
                                 onClick={closeMenu}
                                 className={`mt-1 flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
                                     isMyProductsActive
-                                        ? "bg-indigo-50 text-indigo-700"
+                                        ? "bg-blue-50 text-blue-700"
                                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                                 }`}
                             >
@@ -273,7 +289,7 @@ export default function UserNavbar() {
                                 </span>
 
                                 {isMyProductsActive && (
-                                    <span className="text-xs text-indigo-600">
+                                    <span className="text-xs text-blue-600">
                                         ●
                                     </span>
                                 )}
@@ -286,7 +302,7 @@ export default function UserNavbar() {
                                 onClick={closeMenu}
                                 className={`mt-1 flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
                                     isCreateProductActive
-                                        ? "bg-indigo-50 text-indigo-700"
+                                        ? "bg-blue-50 text-blue-700"
                                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                                 }`}
                             >
@@ -295,7 +311,7 @@ export default function UserNavbar() {
                                 </span>
 
                                 {isCreateProductActive && (
-                                    <span className="text-xs text-indigo-600">
+                                    <span className="text-xs text-blue-600">
                                         ●
                                     </span>
                                 )}
@@ -318,7 +334,7 @@ export default function UserNavbar() {
                                 onClick={closeMenu}
                                 className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
                                     isMyRentalsActive
-                                        ? "bg-indigo-50 text-indigo-700"
+                                        ? "bg-blue-50 text-blue-700"
                                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                                 }`}
                             >
@@ -327,7 +343,7 @@ export default function UserNavbar() {
                                 </span>
 
                                 {isMyRentalsActive && (
-                                    <span className="text-xs text-indigo-600">
+                                    <span className="text-xs text-blue-600">
                                         ●
                                     </span>
                                 )}
@@ -340,7 +356,7 @@ export default function UserNavbar() {
                                 onClick={closeMenu}
                                 className={`mt-1 flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
                                     isOwnerRequestsActive
-                                        ? "bg-indigo-50 text-indigo-700"
+                                        ? "bg-blue-50 text-blue-700"
                                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                                 }`}
                             >
@@ -349,13 +365,26 @@ export default function UserNavbar() {
                                 </span>
 
                                 {isOwnerRequestsActive && (
-                                    <span className="text-xs text-indigo-600">
+                                    <span className="text-xs text-blue-600">
                                         ●
                                     </span>
                                 )}
                             </Link>
 
                             <div className="my-4 border-t border-slate-100" />
+
+                            <Link
+                                href="/users/profile"
+                                onClick={closeMenu}
+                                aria-current={isActive("/users/profile") ? "page" : undefined}
+                                className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
+                                    isActive("/users/profile")
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                                }`}
+                            >
+                                Profile &amp; Settings
+                            </Link>
 
                             {/* Logout */}
 

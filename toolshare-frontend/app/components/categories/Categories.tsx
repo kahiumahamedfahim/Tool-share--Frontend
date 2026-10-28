@@ -451,6 +451,31 @@ export default function Categories() {
         }
     };
 
+    const handleToggleStatus = async (category: Category) => {
+        if (!canManageCategories) return;
+
+        const action = category.status === "ACTIVE" ? "deactivate" : "activate";
+        try {
+            setLoading(true);
+            setError("");
+            setShowError(false);
+            await api.patch(`/categories/${category.categoryId}/${action}`);
+            await fetchCategories();
+        } catch (error: unknown) {
+            const backendMessage = isAxiosError(error)
+                ? error.response?.data?.message
+                : undefined;
+            setError(
+                Array.isArray(backendMessage)
+                    ? backendMessage.join(", ")
+                    : backendMessage || `Failed to ${action} category.`,
+            );
+            setShowError(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     /*
     |--------------------------------------------------------------------------
     | Previous Page
@@ -802,6 +827,20 @@ export default function Categories() {
                                                         className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
                                                     >
                                                         Edit
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleToggleStatus(category)}
+                                                        disabled={loading}
+                                                        aria-label={`${category.status === "ACTIVE" ? "Deactivate" : "Activate"} ${category.name}`}
+                                                        className={`rounded-lg border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                                                            category.status === "ACTIVE"
+                                                                ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                                                : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                                                        }`}
+                                                    >
+                                                        {category.status === "ACTIVE" ? "Deactivate" : "Activate"}
                                                     </button>
 
                                                     {/* Delete */}

@@ -64,6 +64,17 @@ export default function RiderNavbar() {
                             <NotificationBell />
                         </div>
                         <Link
+                            href="/users/profile"
+                            aria-current={isActive("/users/profile") ? "page" : undefined}
+                            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                isActive("/users/profile")
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                            }`}
+                        >
+                            Profile
+                        </Link>
+                        <Link
                             href="/logout"
                             className="ml-1 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 hover:text-red-700"
                         >
@@ -73,6 +84,13 @@ export default function RiderNavbar() {
 
                     <div className="flex items-center gap-2 lg:hidden">
                         <NotificationBell />
+                        <Link
+                            href="/users/profile"
+                            aria-label="Open profile"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-700 hover:bg-blue-100"
+                        >
+                            R
+                        </Link>
                         <button
                             type="button"
                             onClick={() => setMenuOpen((open) => !open)}
@@ -105,6 +123,18 @@ export default function RiderNavbar() {
                                 </Link>
                             ))}
                             <div className="my-2 border-t border-slate-100" />
+                            <Link
+                                href="/users/profile"
+                                onClick={closeMenu}
+                                aria-current={isActive("/users/profile") ? "page" : undefined}
+                                className={`flex rounded-xl px-4 py-3 text-sm font-medium transition ${
+                                    isActive("/users/profile")
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                                }`}
+                            >
+                                Profile &amp; Settings
+                            </Link>
                             <Link
                                 href="/logout"
                                 onClick={closeMenu}
