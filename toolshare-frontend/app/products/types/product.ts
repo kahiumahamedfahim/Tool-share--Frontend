@@ -52,6 +52,8 @@ export interface Product {
     preparationBufferDays: number;
     allowSameDayRental: boolean;
 
+    securityDeposit?: number | string;
+
     availabilityStatus?: string;
 
     category?: ProductCategory;

@@ -50,6 +50,8 @@ interface ProductResponse {
 
     negotiationAllowed?: boolean;
 
+    securityDeposit?: number | string;
+
     pickupAddress?: string;
 
     pickupLatitude?: number | string | null;
@@ -64,6 +66,15 @@ interface ProductResponse {
         userId?: string;
         firstName?: string;
         lastName?: string;
+        phone?: string;
+    };
+
+    location?: {
+        pickupAddress?: string;
+    };
+
+    category?: {
+        name?: string;
     };
 }
 
@@ -163,6 +174,9 @@ export default function CreateRentalRequestPage() {
 
     const [success, setSuccess] =
         useState("");
+
+    const [agreeToTerms, setAgreeToTerms] =
+        useState(false);
         
 
     /* =================================================
@@ -563,6 +577,14 @@ export default function CreateRentalRequestPage() {
         ) {
             setError(
                 "Negotiation is not available for this product.",
+            );
+
+            return false;
+        }
+
+        if (!agreeToTerms) {
+            setError(
+                "Please agree to the rental terms before submitting.",
             );
 
             return false;
@@ -996,6 +1018,105 @@ export default function CreateRentalRequestPage() {
                                             }
                                         </p>
                                     )}
+                                </div>
+                            </section>
+
+                            {/* OWNER */}
+                            <section
+                                className="rounded-2xl border border-slate-200 bg-white shadow-sm"
+                            >
+                                <div className="border-b border-slate-100 px-6 py-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+                                            👤
+                                        </div>
+
+                                        <div>
+                                            <h2 className="text-base font-semibold text-slate-950">
+                                                Product owner
+                                            </h2>
+
+                                            <p className="text-xs text-slate-500">
+                                                Verification and
+                                                contact information
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xl">
+                                            {
+                                                (
+                                                    product.owner?.firstName
+                                                        ?.charAt(0) ??
+                                                    ""
+                                                ) +
+                                                (
+                                                    product.owner?.lastName
+                                                        ?.charAt(0) ??
+                                                    ""
+                                                )
+                                            }
+                                        </div>
+
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-950">
+                                                {
+                                                    product.owner
+                                                        ?.firstName
+                                                }
+                                                {
+                                                    product.owner?.lastName
+                                                }
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-slate-500 flex items-center gap-2">
+                                                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+
+                                                Verified owner
+                                            </p>
+
+                                            {product.owner?.phone && (
+                                                <p className="mt-1 text-xs text-slate-500 flex items-center gap-2">
+                                                    ☎
+                                                    {
+                                                        product.owner.phone
+                                                    }
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 grid grid-cols-2 gap-4">
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                                Location
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-slate-600">
+                                                {
+                                                    product.location
+                                                        ?.pickupAddress ??
+                                                    "Not specified"
+                                                }
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                                Category
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-slate-600">
+                                                {
+                                                    product.category?.name ??
+                                                    "Not specified"
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
 
@@ -1586,30 +1707,88 @@ export default function CreateRentalRequestPage() {
                                         </p>
                                     </div>
 
-                                    <button
-                                        type="submit"
-                                        disabled={
-                                            submitting
-                                        }
-                                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        {submitting ? (
-                                            <>
-                                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-300 border-t-white" />
+                                    {product.securityDeposit &&
+                                    Number(product.securityDeposit) > 0 && (
+                                        <div
+                                            className="rounded-xl border border-amber-100 bg-amber-50 p-5"
+                                        >
+                                            <p className="text-xs font-medium text-amber-600">
+                                                Security deposit
+                                            </p>
 
-                                                Submitting...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Submit rental
-                                                request
+                                            <p className="mt-1 text-lg font-bold text-slate-950">
+                                                ৳
+                                                {
+                                                    Number(
+                                                        product.securityDeposit,
+                                                    ).toLocaleString()
+                                                }
+                                            </p>
 
-                                                <span>
-                                                    →
-                                                </span>
-                                            </>
-                                        )}
-                                    </button>
+                                            <p className="mt-2 text-xs leading-5 text-slate-500">
+                                                Refundable deposit held
+                                                until product is
+                                                returned.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <div className="border-t border-slate-100 pt-6 space-y-4">
+                                        <div className="flex items-start gap-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    agreeToTerms
+                                                }
+                                                onChange={(
+                                                    event,
+                                                ) =>
+                                                    setAgreeToTerms(
+                                                        event
+                                                            .target
+                                                            .checked,
+                                                    )
+                                                }
+                                                className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                            />
+
+                                            <div className="text-sm leading-5 text-slate-600">
+                                                I agree to the
+                                                <span className="font-medium text-slate-900">
+                                                    rental terms
+                                                </span>{" "}
+                                                and authorize the
+                                                platform to
+                                                process this
+                                                rental request.
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            disabled={
+                                                submitting ||
+                                                !agreeToTerms
+                                            }
+                                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            {submitting ? (
+                                                <>
+                                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-300 border-t-white" />
+
+                                                    Submitting...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Submit rental
+                                                    request
+
+                                                    <span>
+                                                        →
+                                                    </span>
+                                                </>
+                                            )}
+                                        </button>
 
                                     <p className="text-center text-[11px] leading-5 text-slate-400">
                                         Your request will be sent
@@ -1618,7 +1797,8 @@ export default function CreateRentalRequestPage() {
                                     </p>
                                 </div>
                             </div>
-                        </aside>
+                        </div>
+                    </aside>
                     </form>
                 </div>
             </main>
