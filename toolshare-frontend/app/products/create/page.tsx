@@ -500,8 +500,10 @@ function DateField({
 /* Page                                                                       */
 /* -------------------------------------------------------------------------- */
 
-export default function CreateProductPage() {
+export default function CreateProductPage() 
+{
     const router = useRouter();
+    
 
     const [currentStep, setCurrentStep] = useState<Step>(1);
     const [authChecking, setAuthChecking] = useState(true);
@@ -526,6 +528,7 @@ export default function CreateProductPage() {
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
     const [categoryError, setCategoryError] = useState("");
     const [categoryRetry, setCategoryRetry] = useState(0);
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
     const {
         register,
@@ -750,58 +753,46 @@ export default function CreateProductPage() {
     /* File handlers                                                          */
     /* ---------------------------------------------------------------------- */
 
-    const handleImageChange = (
-        event: React.ChangeEvent<HTMLInputElement>,
-    ) => {
-        const files = Array.from(
-            event.target.files ?? [],
-        );
+   const handleImageChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+) => {
+    const newFiles = Array.from(event.target.files ?? []);
 
-        if (files.length === 0) {
-            return;
-        }
+    if (newFiles.length === 0) return;
 
-        const availableSlots =
-            Math.max(
-                0,
-                10 - selectedImages.length,
-            );
+    const uniqueNewFiles = newFiles.filter(
+        (newFile) =>
+            !selectedImages.some(
+                (existingFile) =>
+                    existingFile.name === newFile.name &&
+                    existingFile.size === newFile.size &&
+                    existingFile.lastModified === newFile.lastModified,
+            ),
+    );
 
-        const acceptedFiles = files
-            .filter(
-                (file) =>
-                    !selectedImages.some(
-                        (existingFile) =>
-                            existingFile.name ===
-                                file.name &&
-                            existingFile.size ===
-                                file.size &&
-                            existingFile.lastModified ===
-                                file.lastModified,
-                    ),
-            )
-            .slice(0, availableSlots);
+    const combinedImages = [...selectedImages, ...uniqueNewFiles];
 
-        const combined = [
-            ...selectedImages,
-            ...acceptedFiles,
-        ];
+    setSelectedImages(combinedImages);
 
-        setSelectedImages(combined);
+    setValue("images", combinedImages, {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true,
+    });
 
-        setValue(
-            "images",
-            combined,
-            {
-                shouldValidate: true,
-                shouldDirty: true,
-                shouldTouch: true,
-            },
-        );
+    event.target.value = "";
+};
+useEffect(() => {
+    const urls = selectedImages.map((file) =>
+        URL.createObjectURL(file),
+    );
 
-        event.target.value = "";
+    setImagePreviews(urls);
+
+    return () => {
+        urls.forEach((url) => URL.revokeObjectURL(url));
     };
-
+}, [selectedImages]);
     const handleRemoveImage = (
         index: number,
     ) => {
@@ -2648,68 +2639,62 @@ export default function CreateProductPage() {
                                             }
                                         />
 
-                                        {selectedImages.length >
-                                            0 && (
-                                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                                {selectedImages.map(
-                                                    (
-                                                        image,
-                                                        index,
-                                                    ) => (
-                                                        <div
-                                                            key={`${image.name}-${image.size}-${image.lastModified}`}
-                                                            className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
-                                                        >
-                                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                                                                <Icon
-                                                                    name="image"
-                                                                    size={
-                                                                        17
-                                                                    }
-                                                                />
-                                                            </div>
+                                       {selectedImages.length > 0 && (
+    <div className="mt-5">
+        <div className="mb-3 flex items-center justify-between">
+            <div>
+                <p className="text-sm font-semibold text-slate-900">
+                    Selected Images
+                </p>
+                <p className="text-xs text-slate-500">
+                    {selectedImages.length} of 10 images selected
+                </p>
+            </div>
+        </div>
 
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="truncate text-sm font-semibold text-slate-800">
-                                                                    {
-                                                                        image.name
-                                                                    }
-                                                                </p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {selectedImages.map((image, index) => {
+                const previewUrl = URL.createObjectURL(image);
 
-                                                                <p className="mt-0.5 text-xs text-slate-400">
-                                                                    {(
-                                                                        image.size /
-                                                                        1024 /
-                                                                        1024
-                                                                    ).toFixed(
-                                                                        2,
-                                                                    )}{" "}
-                                                                    MB
-                                                                </p>
-                                                            </div>
+                return (
+                    <div
+                        key={`${image.name}-${image.size}-${image.lastModified}`}
+                        className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
+                    >
+                        <div className="aspect-square">
+                            <img
+                                src={previewUrl}
+                                alt={`Product image ${index + 1}`}
+                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                            />
+                        </div>
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleRemoveImage(
-                                                                        index,
-                                                                    )
-                                                                }
-                                                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                                                                aria-label={`Remove ${image.name}`}
-                                                            >
-                                                                <Icon
-                                                                    name="x"
-                                                                    size={
-                                                                        16
-                                                                    }
-                                                                />
-                                                            </button>
-                                                        </div>
-                                                    ),
-                                                )}
-                                            </div>
-                                        )}
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
+                            <p className="truncate text-xs font-medium text-white">
+                                {image.name}
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-sm font-bold text-red-600 shadow-md transition hover:bg-red-50"
+                            aria-label={`Remove ${image.name}`}
+                        >
+                            ×
+                        </button>
+
+                        {index === 0 && (
+                            <span className="absolute left-2 top-2 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow">
+                                Main
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    </div>
+)}
                                     </div>
 
                                     {/* Documents */}
