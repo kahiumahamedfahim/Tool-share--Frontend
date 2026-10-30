@@ -76,10 +76,36 @@ interface ProductResponse {
     category?: {
         name?: string;
     };
+
+    // Owner-chosen date windows (ISO date strings)
+    rentalWindowStart?: string | null;
+    rentalWindowEnd?: string | null;
+    deliveryWindowStart?: string | null;
+    deliveryWindowEnd?: string | null;
+    returnWindowStart?: string | null;
+    returnWindowEnd?: string | null;
 }
 
 interface ApiProductResponse {
     data: ProductResponse;
+}
+
+function formatRentDate(
+    value: string | null | undefined,
+): string {
+    if (!value) {
+        return "Not set";
+    }
+
+    try {
+        return new Date(value).toLocaleDateString("en-BD", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    } catch {
+        return value;
+    }
 }
 
 /* =====================================================
@@ -1142,6 +1168,112 @@ export default function CreateRentalRequestPage() {
                                 </div>
 
                                 <div className="p-6">
+                                    {/* OWNER WINDOWS */}
+                                    {(
+                                        product.rentalWindowStart ||
+                                        product.rentalWindowEnd ||
+                                        product.deliveryWindowStart ||
+                                        product.deliveryWindowEnd ||
+                                        product.returnWindowStart ||
+                                        product.returnWindowEnd
+                                    ) && (
+                                        <div
+                                            className="mb-6 grid gap-4 sm:grid-cols-3"
+                                        >
+                                            <div
+                                                className="rounded-xl border border-blue-100 bg-blue-50 p-4"
+                                            >
+                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">
+                                                    Owner Rental
+                                                    Window
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-slate-700">
+                                                    {
+                                                        formatRentDate(
+                                                            product
+                                                                .rentalWindowStart,
+                                                        )
+                                                    }
+                                                    {" to "}
+                                                    {
+                                                        formatRentDate(
+                                                            product
+                                                                .rentalWindowEnd,
+                                                        )
+                                                    }
+                                                </p>
+
+                                                <p className="mt-2 text-xs text-slate-500">
+                                                    When this product
+                                                    may be rented.
+                                                </p>
+                                            </div>
+
+                                            <div
+                                                className="rounded-xl border border-amber-100 bg-amber-50 p-4"
+                                            >
+                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+                                                    Delivery Window
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-slate-700">
+                                                    {
+                                                        formatRentDate(
+                                                            product
+                                                                .deliveryWindowStart,
+                                                        )
+                                                    }
+                                                    {" to "}
+                                                    {
+                                                        formatRentDate(
+                                                            product
+                                                                .deliveryWindowEnd,
+                                                        )
+                                                    }
+                                                </p>
+
+                                                <p className="mt-2 text-xs text-slate-500">
+                                                    When the owner
+                                                    hands the
+                                                    product to the
+                                                    rider.
+                                                </p>
+                                            </div>
+
+                                            <div
+                                                className="rounded-xl border border-emerald-100 bg-emerald-50 p-4"
+                                            >
+                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                                                    Return Window
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-slate-700">
+                                                    {
+                                                        formatRentDate(
+                                                            product
+                                                                .returnWindowStart,
+                                                        )
+                                                    }
+                                                    {" to "}
+                                                    {
+                                                        formatRentDate(
+                                                            product
+                                                                .returnWindowEnd,
+                                                        )
+                                                    }
+                                                </p>
+
+                                                <p className="mt-2 text-xs text-slate-500">
+                                                    When the product
+                                                    must be back
+                                                    with the
+                                                    owner.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="grid gap-5 md:grid-cols-2">
                                         <div>
                                             <label className="mb-2 block text-sm font-medium text-slate-700">

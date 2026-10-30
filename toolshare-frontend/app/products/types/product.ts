@@ -56,6 +56,14 @@ export interface Product {
 
     availabilityStatus?: string;
 
+    // Owner-chosen date windows (ISO date strings)
+    rentalWindowStart?: string | null;
+    rentalWindowEnd?: string | null;
+    deliveryWindowStart?: string | null;
+    deliveryWindowEnd?: string | null;
+    returnWindowStart?: string | null;
+    returnWindowEnd?: string | null;
+
     category?: ProductCategory;
     owner?: ProductOwner;
     location?: ProductLocation;

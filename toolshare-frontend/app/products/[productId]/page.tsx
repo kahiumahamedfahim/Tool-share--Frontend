@@ -65,6 +65,22 @@ function formatPrice(value: unknown): string {
     return number.toFixed(2);
 }
 
+function formatDate(value: string | null | undefined): string {
+    if (!value) {
+        return "—";
+    }
+
+    try {
+        return new Date(value).toLocaleDateString("en-BD", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    } catch {
+        return value;
+    }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Loading Skeleton                                                           */
 /* -------------------------------------------------------------------------- */
@@ -768,6 +784,128 @@ export default function ProductDetailsPage() {
 
                                         <p className="mt-1 text-sm text-slate-500">
                                             Current listing status
+                                        </p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* ================================================= */}
+                            {/* Rental Windows                                    */}
+                            {/* ================================================= */}
+
+                            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_10px_40px_rgba(15,23,42,0.04)] sm:p-8">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                                        Scheduling
+                                    </p>
+
+                                    <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
+                                        Rental Windows
+                                    </h2>
+
+                                    <p className="mt-2 text-sm text-slate-500">
+                                        When the product is available
+                                        for pickup, rental, and
+                                        return.
+                                    </p>
+                                </div>
+
+                                <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                                    <div className="rounded-2xl bg-slate-50 p-5">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                                            Rental Window
+                                        </p>
+
+                                        <p className="mt-2 text-lg font-bold text-slate-950">
+                                            {
+                                                product.rentalWindowStart ||
+                                                product.rentalWindowEnd ? (
+                                                    <>
+                                                        {formatDate(
+                                                            product
+                                                                .rentalWindowStart,
+                                                        )}
+                                                        {" to "}
+                                                        {formatDate(
+                                                            product
+                                                                .rentalWindowEnd,
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    "Not set"
+                                                )
+                                            }
+                                        </p>
+
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Period when the product
+                                            may be rented.
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-2xl bg-slate-50 p-5">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                                            Delivery Window
+                                        </p>
+
+                                        <p className="mt-2 text-lg font-bold text-slate-950">
+                                            {
+                                                product.deliveryWindowStart ||
+                                                product.deliveryWindowEnd ? (
+                                                    <>
+                                                        {formatDate(
+                                                            product
+                                                                .deliveryWindowStart,
+                                                        )}
+                                                        {" to "}
+                                                        {formatDate(
+                                                            product
+                                                                .deliveryWindowEnd,
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    "Not set"
+                                                )
+                                            }
+                                        </p>
+
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Window when the owner
+                                            hands the product
+                                            to the rider.
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-2xl bg-slate-50 p-5">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                                            Return Window
+                                        </p>
+
+                                        <p className="mt-2 text-lg font-bold text-slate-950">
+                                            {
+                                                product.returnWindowStart ||
+                                                product.returnWindowEnd ? (
+                                                    <>
+                                                        {formatDate(
+                                                            product
+                                                                .returnWindowStart,
+                                                        )}
+                                                        {" to "}
+                                                        {formatDate(
+                                                            product
+                                                                .returnWindowEnd,
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    "Not set"
+                                                )
+                                            }
+                                        </p>
+
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Window when the
+                                            product must be back
+                                            with the owner.
                                         </p>
                                     </div>
                                 </div>
