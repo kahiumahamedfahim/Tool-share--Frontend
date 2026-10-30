@@ -74,6 +74,14 @@ export default function ProductList() {
 
     const [error, setError] = useState("");
 
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    useEffect(() => {
+        setIsAuthenticated(
+            Boolean(window.localStorage.getItem("userRole")),
+        );
+    }, []);
+
     const fetchProducts = useCallback(async () => {
         setIsLoading(true);
         setError("");
@@ -177,6 +185,25 @@ export default function ProductList() {
                         <p className="mt-3 text-sm text-slate-500">
                             <span className="font-semibold tabular-nums text-slate-800">{meta.total}</span> listing{meta.total === 1 ? "" : "s"}
                         </p>
+                    )}
+                </div>
+
+                <div>
+                    {isAuthenticated && (
+                        <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                            <span aria-hidden className="mt-0.5 text-blue-600">ℹ️</span>
+
+                            <p className="text-sm leading-5 text-slate-600">
+                                Your own listings are hidden here.
+
+                                <Link
+                                    href="/products/my-products"
+                                    className="ml-1 font-semibold text-blue-600 underline-offset-2 hover:underline"
+                                >
+                                    View my products
+                                </Link>
+                            </p>
+                        </div>
                     )}
                 </div>
 
