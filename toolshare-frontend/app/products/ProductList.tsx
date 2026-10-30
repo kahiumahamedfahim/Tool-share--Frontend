@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import api from "@/app/lib/axios";
@@ -74,7 +75,20 @@ export default function ProductList() {
 
     const [error, setError] = useState("");
 
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const [searchSuggestions, setSearchSuggestions] =
+        useState<Product[]>([]);
+
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(
+        null,
+    );
+
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    const router = useRouter();
 
     useEffect(() => {
         setIsAuthenticated(
@@ -94,6 +108,7 @@ export default function ProductList() {
                         params: {
                             page,
                             limit,
+                            search: searchQuery || undefined,
                         },
                     },
                 );
@@ -105,6 +120,14 @@ export default function ProductList() {
                 : [];
 
             setProducts(rows);
+
+            // Populate autocomplete suggestions when a search is active.
+            if (searchQuery.trim().length > 0) {
+                setSearchSuggestions(rows);
+                setIsSearchOpen(true);
+            } else {
+                setSearchSuggestions([]);
+            }
 
             setMeta({
                 ...DEFAULT_META,
@@ -126,7 +149,26 @@ export default function ProductList() {
         } finally {
             setIsLoading(false);
         }
-    }, [page, limit]);
+    }, [page, limit, searchQuery]);
+
+    // Debounce search input and reset to page 1 when the query changes.
+    useEffect(() => {
+        if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current);
+        }
+
+        setPage(1);
+
+        debounceTimer.current = setTimeout(() => {
+            void fetchProducts();
+        }, 300);
+
+        return () => {
+            if (debounceTimer.current) {
+                clearTimeout(debounceTimer.current);
+            }
+        };
+    }, [searchQuery, fetchProducts]);
 
     useEffect(() => {
         void fetchProducts();
@@ -183,7 +225,7 @@ export default function ProductList() {
 
                     {!error && (
                         <p className="mt-3 text-sm text-slate-500">
-                            <span className="font-semibold tabular-nums text-slate-800">{meta.total}</span> listing{meta.total === 1 ? "" : "s"}
+                            <span className="font-semibold tabular-nums text-slate-800">{meta.total}</span> listing{meta.total === 1 ? "" : "s"}{searchQuery ? ` for "${searchQuery}"` : ""}
                         </p>
                     )}
                 </div>
@@ -205,6 +247,99 @@ export default function ProductList() {
                             </p>
                         </div>
                     )}
+                </div>
+
+                {/* SEARCH */}
+                <div
+                    className="relative inline-block self-start sm:self-auto"
+                >
+                    <div className="relative w-full sm:w-80">
+                        <input
+                            id="products-search"
+                            defaultValue=""
+                            placeholder="Search tools…"
+                            value={searchQuery}
+                            onChange={(event) => {
+                                setSearchQuery(event.target.value);
+                                setIsSearchOpen(true);
+                            }}
+                            onFocus={() => setIsSearchOpen(true)}
+                            onBlur={() => {
+                                setTimeout(
+                                    () => setIsSearchOpen(false),
+                                    150,
+                                );
+                            }}
+                            className="ts-input w-full min-h-10 rounded-l-xl border border-slate-200 bg-white px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none sm:rounded-l-none sm:rounded-full"
+                        />
+
+                        {/* AUTOCOMPLETE DROPDOWN */}
+                        {isSearchOpen &&
+                            searchQuery.trim().length > 0 &&
+                            searchSuggestions.length > 0 && (
+                                <div
+                                    className="absolute z-50 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg"
+                                >
+                                    <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                        Suggestions
+                                    </div>
+
+                                    {searchSuggestions.slice(0, 5).map(
+                                        (suggestion) => {
+                                            const detailsUrl =
+                                                `/products/${encodeURIComponent(
+                                                    suggestion.productId,
+                                                )}`;
+
+                                            return (
+                                                <a
+                                                    key={
+                                                        suggestion.productId ||
+                                                        suggestion.id
+                                                    }
+                                                    href={detailsUrl}
+                                                    onClick={(event) => {
+                                                        event.preventDefault();
+                                                        setSearchQuery("");
+                                                        setIsSearchOpen(false);
+                                                        router.push(detailsUrl);
+                                                    }}
+                                                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-primary transition"
+                                                >
+                                                    {suggestion
+                                                        .productImages?.[0] &&
+                                                    suggestion
+                                                        .productImages[0]
+                                                        ?.imageUrl ? (
+                                                        <img
+                                                            src={
+                                                                suggestion
+                                                                    .productImages[0]
+                                                                    .imageUrl
+                                                            }
+                                                            alt=""
+                                                            className="h-8 w-8 rounded-lg object-cover bg-slate-100"
+                                                        />
+                                                    ) : (
+                                                        <div
+                                                            className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-400 font-semibold"
+                                                        >
+                                                            {suggestion.name
+                                                                .charAt(0)
+                                                                .toUpperCase()}
+                                                        </div>
+                                                    )}
+
+                                                    <span className="line-clamp-1 min-w-0 flex-1">
+                                                        {suggestion.name}
+                                                    </span>
+                                                </a>
+                                            );
+                                        },
+                                    )}
+                                </div>
+                            )}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:self-auto">
@@ -265,7 +400,15 @@ export default function ProductList() {
                     </h2>
 
                     <p className="mt-2 text-sm text-slate-600">
-                        No available listings match this page right now. Check back soon.
+                        {searchQuery ? (
+                            <>
+                                No listings found for
+                                <span className="font-semibold">"{searchQuery}"</span>{" "}
+                                . Try another keyword.
+                            </>
+                        ) : (
+                            "No available listings match this page right now. Check back soon."
+                        )}
                     </p>
                 </div>
             ) : (
